@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="True">
+    <ui:Style src="project://database/Assets/Scripts/GameData/Inventory/Editor/ItemEditor/ItemEditorWindow.uss?fileID=7433441132597879392&amp;guid=95ab11281ed084547a8d48748d6aecd2&amp;type=3#ItemEditorWindow" />
+    <ui:VisualElement name="ItemRow" class="item-row">
+        <ui:Image name="RowIcon" class="item-row-icon" />
+        <ui:VisualElement class="item-row-text">
+            <ui:Label name="RowName" class="item-row-name" />
+            <ui:Label name="RowDetail" class="item-row-detail" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

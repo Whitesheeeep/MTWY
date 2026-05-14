@@ -1,0 +1,59 @@
+# Unity generated folders
+/Library/
+/Temp/
+/Obj/
+/obj/
+/Build/
+/Builds/
+/Logs/
+/UserSettings/
+/UIElementsSchema/
+
+# Unity generated files
+*.csproj
+*.sln
+*.sln.DotSettings.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity crash/debug output
+sysinfo.txt
+*.stackdump
+
+# Asset Store / package cache
+/Assets/AssetStoreTools*
+/Library/PackageCache/
+
+# IDEs and editors
+/.vs/
+/.vscode/
+/.idea/
+/.todo/
+*.user
+*.userprefs
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Rider
+/.idea/
+*.sln.DotSettings.user
+
+# Builds and archives
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.ipa

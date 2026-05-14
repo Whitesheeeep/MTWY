@@ -1,0 +1,64 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:Style src="project://database/Assets/Scripts/GameData/Inventory/Editor/ItemEditor/ItemEditorWindow.uss?fileID=7433441132597879392&amp;guid=95ab11281ed084547a8d48748d6aecd2&amp;type=3#ItemEditorWindow" />
+    <ui:VisualElement name="ItemEditorRoot" class="item-editor-root">
+        <ui:VisualElement name="TopBar" class="top-bar">
+            <uie:ObjectField name="DataListField" label="Data List" class="data-list-field unity-base-field__aligned" />
+            <ui:TextField name="SearchField" label="Search" class="search-field" />
+            <ui:Button name="SaveButton" text="Save" class="toolbar-button primary-button" />
+        </ui:VisualElement>
+        <ui:VisualElement name="MainSplit" class="main-split">
+            <ui:VisualElement name="LeftPanel" class="left-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="ItemList" class="panel-title" />
+                    <ui:Button name="AddButton" text="+" class="icon-button add-button" />
+                </ui:VisualElement>
+                <ui:ListView name="ItemListView" class="item-list" />
+            </ui:VisualElement>
+            <ui:VisualElement name="RightPanel" class="right-panel">
+                <ui:VisualElement class="details-header">
+                    <ui:Label text="Details" class="details-title" />
+                    <ui:Button name="DeleteButton" text="Delete" class="toolbar-button danger-button" />
+                </ui:VisualElement>
+                <ui:VisualElement name="EmptyState" class="empty-state">
+                    <ui:Label text="Select or create an item to edit details." class="empty-state-text" />
+                </ui:VisualElement>
+                <ui:ScrollView name="DetailContent" class="detail-scroll">
+                    <ui:VisualElement class="section">
+                        <ui:Label text="General" class="section-title" />
+                        <ui:VisualElement class="general-layout">
+                            <ui:Image name="IconPreview" class="icon-preview" />
+                            <ui:VisualElement class="general-fields">
+                                <uie:IntegerField name="IdField" label="ID" class="unity-base-field__aligned" />
+                                <ui:TextField name="NameField" label="Name" class="unity-base-field__aligned" />
+                                <ui:EnumField name="TypeField" label="Type" class="unity-base-field__aligned" />
+                                <uie:ObjectField name="IconField" label="Icon" class="unity-base-field__aligned" />
+                                <uie:ObjectField name="WorldIconField" label="OnWorld Sprite" class="unity-base-field__aligned" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="section">
+                        <ui:Label text="Description" class="section-title" />
+                        <ui:TextField name="DescriptionField" multiline="true" class="description-field" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="bottom-grid">
+                        <ui:VisualElement class="section bottom-section">
+                            <ui:Label text="Properties" class="section-title" />
+                            <uie:IntegerField name="UseRadiusField" label="Use Radius" class="unity-base-field__aligned" />
+                            <ui:Toggle name="CanPickupToggle" label="Can Pickup" class="unity-base-field__aligned" />
+                            <ui:Toggle name="CanDroppedToggle" label="Can Dropped" class="unity-base-field__aligned" />
+                            <ui:Toggle name="CanCarriedToggle" label="Can Carried" class="unity-base-field__aligned" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="section bottom-section">
+                            <ui:Label text="Vendor" class="section-title" />
+                            <uie:IntegerField name="PriceField" label="Buy Price" class="unity-base-field__aligned" />
+                            <ui:VisualElement class="sell-row">
+                                <ui:SliderInt name="SellPercentSlider" label="Sell Percentage(%)" low-value="0" high-value="100" class="sell-percent-slider unity-base-field__aligned" />
+                                <uie:IntegerField name="SellPercentField" class="sell-percent-field" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
