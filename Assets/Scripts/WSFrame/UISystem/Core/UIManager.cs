@@ -324,7 +324,7 @@ namespace WS_Modules.UIModule
             else
                 WSLog.LogError("窗口字典中不存在窗口，无法显示窗口，窗口名称:" + windowName);
 
-            return null;
+            return wnd;
         }
 
         private void SetWindowMaskVisible()
