@@ -31,7 +31,14 @@ namespace WS_Modules.UIModule
             this.Transform = transform;
             this.Canvas = canvas;
             this.Name = name;
-            this.Canvas.worldCamera = camera;
+            if (this.Canvas != null)
+            {
+                this.Canvas.worldCamera = camera;
+            }
+            else
+            {
+                WSLog.LogWarning($"{Name} 缺少 Canvas 组件，窗口排序、遮罩动画和渲染层级可能无法正常工作");
+            }
             
             OnAwake();
         }
@@ -59,7 +66,6 @@ namespace WS_Modules.UIModule
         {
             base.OnHide();
             WSLog.Log($"{Name} OnHide");
-            HideAnimation();
         }
 
         public override void OnDestroy()
@@ -82,27 +88,44 @@ namespace WS_Modules.UIModule
             _CanvasGroup = Transform.GetOrAddComponent<CanvasGroup>();
             _UIMaskCanvasGroup = Transform.Find("UIMask")?.GetOrAddComponent<CanvasGroup>();
             _UIContent = Transform.Find("UIContent")?.transform;
+
+            if (_UIMaskCanvasGroup == null)
+            {
+                WSLog.LogWarning($"{Name} 缺少 UIMask 节点，遮罩显示和弹窗遮罩动画将被跳过");
+            }
+
+            if (_UIContent == null)
+            {
+                WSLog.LogWarning($"{Name} 缺少 UIContent 节点，弹窗缩放动画将被跳过");
+            }
         }
 
         #region 动画管理
         public void ShowAnimation()
         {
             //基础弹窗不需要动画
-            if (Canvas.sortingOrder > 90 && !_disableAnim)
+            if (Canvas != null && Canvas.sortingOrder > 90 && !_disableAnim)
             {
                 // WSLog.Log("Play Show Animation! " + Name);
                 //Mask动画
-                _UIMaskCanvasGroup.alpha = 0;
-                _UIMaskCanvasGroup.DOFade(1, 0.2f);
+                if (_UIMaskCanvasGroup != null)
+                {
+                    _UIMaskCanvasGroup.alpha = 0;
+                    _UIMaskCanvasGroup.DOFade(1, 0.2f);
+                }
+
                 //缩放动画
-                _UIContent.localScale = Vector3.one * 0.8f;
-                _UIContent.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+                if (_UIContent != null)
+                {
+                    _UIContent.localScale = Vector3.one * 0.8f;
+                    _UIContent.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+                }
             }
         }
 
         public void HideAnimation()
         {
-            if (Canvas.sortingOrder > 90 && !_disableAnim)
+            if (Canvas != null && Canvas.sortingOrder > 90 && !_disableAnim && _UIContent != null)
             {
                 _UIContent.DOScale(Vector3.one * 1.1f, 0.2f).SetEase(Ease.OutBack).OnComplete(() =>
                 {
@@ -127,9 +150,19 @@ namespace WS_Modules.UIModule
         // 通过调整 CanvasGroup 的属性来实现伪隐藏，可以将 alpha 设置为 0 来使窗口不可见，同时保持 interactable 和 blocksRaycasts 的值为 true，这样窗口虽然看不见了，但仍然可以接收点击事件和交互。
         public void PseudoHidden(bool canInteract)
         {
-            _UIMaskCanvasGroup.alpha = _CanvasGroup.alpha = canInteract ? 1 : 0;
-            _UIMaskCanvasGroup.interactable = _CanvasGroup.interactable = canInteract;
-            _UIMaskCanvasGroup.blocksRaycasts = _CanvasGroup.blocksRaycasts = canInteract;
+            if (_CanvasGroup != null)
+            {
+                _CanvasGroup.alpha = canInteract ? 1 : 0;
+                _CanvasGroup.interactable = canInteract;
+                _CanvasGroup.blocksRaycasts = canInteract;
+            }
+
+            if (_UIMaskCanvasGroup != null)
+            {
+                _UIMaskCanvasGroup.alpha = canInteract ? 1 : 0;
+                _UIMaskCanvasGroup.interactable = canInteract;
+                _UIMaskCanvasGroup.blocksRaycasts = canInteract;
+            }
         }
 
         /// <summary>

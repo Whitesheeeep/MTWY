@@ -56,6 +56,10 @@ namespace WS_Modules.UIModule
             //解析窗口组件数据
             AnalysisComponentDataTool.AnalysisWindowNodeData(ref objDataList, obj.transform, obj.name);
 
+            if (!ValidateObjectDataTypes(objDataList))
+            {
+                return;
+            }
 
             //储存字段名称
             string datalistJson = JsonConvert.SerializeObject(objDataList);
@@ -190,6 +194,11 @@ namespace WS_Modules.UIModule
             objDataList = new List<EditorObjectData>();
             //解析窗口组件数据
             AnalysisComponentDataTool.AnalysisWindowNodeData(ref objDataList, obj.transform, obj.name);
+
+            if (!ValidateObjectDataTypes(objDataList))
+            {
+                return;
+            }
             
             //获取脚本所有字段
             FieldInfo[] fieldInfoList = targetScript.GetFields();
@@ -317,6 +326,82 @@ namespace WS_Modules.UIModule
                 PrefabUtility.ApplyPrefabInstance(selectedObject, InteractionMode.AutomatedAction);
             }
             Debug.Log("手动绑定组件成功!");
+        }
+
+        private static bool ValidateObjectDataTypes(List<EditorObjectData> dataList)
+        {
+            if (dataList == null || dataList.Count == 0)
+            {
+                return true;
+            }
+
+            List<string> invalidFields = new List<string>();
+            foreach (EditorObjectData data in dataList)
+            {
+                Type type = ResolveComponentType(data.fieldType);
+                if (type == null)
+                {
+                    invalidFields.Add($"[{data.fieldType}]{data.fieldName}");
+                }
+            }
+
+            if (invalidFields.Count == 0)
+            {
+                return true;
+            }
+
+            Debug.LogError("UI 自动绑定生成失败，以下节点的组件类型无法识别：\n" +
+                           string.Join("\n", invalidFields) +
+                           "\n请检查节点命名，或在 WSFrameSetting.UIManagerSetting.UsingNameSpaceArr 中加入对应命名空间。");
+            return false;
+        }
+
+        private static Type ResolveComponentType(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return null;
+            }
+
+            if (string.Equals(typeName, nameof(GameObject), StringComparison.Ordinal))
+            {
+                return typeof(GameObject);
+            }
+
+            Type type = GetType(typeName);
+            if (type != null)
+            {
+                return type;
+            }
+
+            List<string> commonNamespaces = new List<string>
+            {
+                "UnityEngine",
+                "UnityEngine.UI",
+                "TMPro",
+                nameSpaceName
+            };
+
+            if (setting?.uiManagerSetting?.UsingNameSpaceArr != null)
+            {
+                commonNamespaces.AddRange(setting.uiManagerSetting.UsingNameSpaceArr);
+            }
+
+            foreach (string namespaceName in commonNamespaces)
+            {
+                if (string.IsNullOrEmpty(namespaceName))
+                {
+                    continue;
+                }
+
+                type = GetType($"{namespaceName}.{typeName}");
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
         }
 
         private static Type GetType(string typeName)

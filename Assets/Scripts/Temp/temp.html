@@ -1,0 +1,309 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>UISystem Runtime Windows UI Reference</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #1f1f1f;
+            color: #e6e6e6;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        }
+
+        .page {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0 0 18px;
+        }
+
+        h2 {
+            font-size: 15px;
+            margin: 0 0 10px;
+            color: #f0f0f0;
+        }
+
+        .mock {
+            margin-bottom: 28px;
+            padding: 14px;
+            background: #2b2b2b;
+            border: 1px solid #3d3d3d;
+            border-radius: 6px;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .top {
+            font-weight: 700;
+            color: #d7e8ff;
+        }
+
+        button {
+            height: 26px;
+            padding: 0 12px;
+            color: #eee;
+            background: #3d6bad;
+            border: 0;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            text-align: left;
+            padding: 8px;
+            background: #343434;
+            color: #bfcfe0;
+            border-bottom: 1px solid #4a4a4a;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #3f3f3f;
+        }
+
+        tr.top-row {
+            background: #263449;
+            border-left: 4px solid #4285db;
+        }
+
+        .badge {
+            display: inline-block;
+            min-width: 58px;
+            padding: 2px 7px;
+            border-radius: 3px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .visible { background: #275f3a; color: #9ff0b4; }
+        .hidden { background: #4d4d4d; color: #ccc; }
+        .showing { background: #5f5127; color: #ffd37a; }
+        .destroyed { background: #5f2c27; color: #ff9b91; }
+
+        .card-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 10px;
+        }
+
+        .card {
+            padding: 12px;
+            background: #252525;
+            border: 1px solid #3d3d3d;
+            border-radius: 5px;
+        }
+
+        .card.top-card {
+            border-left: 4px solid #4285db;
+            background: #27313f;
+        }
+
+        .card-title {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            font-size: 12px;
+        }
+
+        .field-name {
+            color: #aaa;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1.4fr 0.8fr;
+            gap: 12px;
+        }
+
+        .detail {
+            padding: 12px;
+            background: #252525;
+            border: 1px solid #454545;
+            border-radius: 5px;
+        }
+
+        .detail-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #d7e8ff;
+        }
+
+        @media (max-width: 860px) {
+            .split {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <h1>UISystem Runtime Windows 显示参考</h1>
+
+    <section class="mock">
+        <h2>方案 A：表格视图，推荐</h2>
+        <div class="toolbar">
+            <span class="top">TopWindow: TestWindow2</span>
+            <button>刷新窗口信息</button>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>WindowName</th>
+                <th>State</th>
+                <th>Visible</th>
+                <th>SortingOrder</th>
+                <th>SiblingIndex</th>
+                <th>FullScreen</th>
+                <th>Mask</th>
+                <th>GameObject</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="top-row">
+                <td><b>TestWindow2</b> · Top</td>
+                <td><span class="badge visible">Visible</span></td>
+                <td>True</td>
+                <td>300</td>
+                <td>4</td>
+                <td>False</td>
+                <td>True</td>
+                <td>True</td>
+            </tr>
+            <tr>
+                <td>TestWindow</td>
+                <td><span class="badge hidden">Hidden</span></td>
+                <td>False</td>
+                <td>200</td>
+                <td>3</td>
+                <td>False</td>
+                <td>False</td>
+                <td>True</td>
+            </tr>
+            <tr>
+                <td>BagWindow</td>
+                <td><span class="badge showing">Showing</span></td>
+                <td>True</td>
+                <td>100</td>
+                <td>2</td>
+                <td>True</td>
+                <td>False</td>
+                <td>True</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="mock">
+        <h2>方案 B：卡片视图</h2>
+        <div class="toolbar">
+            <span class="top">TopWindow: TestWindow2</span>
+            <button>刷新窗口信息</button>
+        </div>
+
+        <div class="card-list">
+            <div class="card top-card">
+                <div class="card-title">
+                    <span>TestWindow2</span>
+                    <span class="badge visible">Top</span>
+                </div>
+                <div class="fields">
+                    <span class="field-name">State</span><span>Visible</span>
+                    <span class="field-name">SortingOrder</span><span>300</span>
+                    <span class="field-name">SiblingIndex</span><span>4</span>
+                    <span class="field-name">FullScreen</span><span>False</span>
+                    <span class="field-name">HasMask</span><span>True</span>
+                    <span class="field-name">HasGameObject</span><span>True</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span>TestWindow</span>
+                    <span class="badge hidden">Hidden</span>
+                </div>
+                <div class="fields">
+                    <span class="field-name">Visible</span><span>False</span>
+                    <span class="field-name">SortingOrder</span><span>200</span>
+                    <span class="field-name">SiblingIndex</span><span>3</span>
+                    <span class="field-name">FullScreen</span><span>False</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mock">
+        <h2>方案 C：表格 + 详情</h2>
+        <div class="toolbar">
+            <span class="top">TopWindow: TestWindow2</span>
+            <button>刷新窗口信息</button>
+        </div>
+
+        <div class="split">
+            <table>
+                <thead>
+                <tr>
+                    <th>WindowName</th>
+                    <th>State</th>
+                    <th>Visible</th>
+                    <th>Order</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="top-row">
+                    <td><b>TestWindow2</b></td>
+                    <td><span class="badge visible">Visible</span></td>
+                    <td>True</td>
+                    <td>300</td>
+                </tr>
+                <tr>
+                    <td>TestWindow</td>
+                    <td><span class="badge hidden">Hidden</span></td>
+                    <td>False</td>
+                    <td>200</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="detail">
+                <div class="detail-title">TestWindow2 Detail</div>
+                <div class="fields">
+                    <span class="field-name">State</span><span>Visible</span>
+                    <span class="field-name">Visible</span><span>True</span>
+                    <span class="field-name">SortingOrder</span><span>300</span>
+                    <span class="field-name">SiblingIndex</span><span>4</span>
+                    <span class="field-name">FullScreenWindow</span><span>False</span>
+                    <span class="field-name">HasMask</span><span>True</span>
+                    <span class="field-name">HasGameObject</span><span>True</span>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

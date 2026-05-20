@@ -41,6 +41,7 @@ namespace WS_Modules
 
         // 需要与其他数据交互的窗口
         private readonly EventSystemView _eventSystemView = new EventSystemView();
+        private readonly UISystemView _uiSystemView = new UISystemView();
         private PoolSystemView _poolSystemView;
 
         private void CreateGUI()
@@ -272,7 +273,7 @@ namespace WS_Modules
         {
             if (!TryGetFrameSetting(container, out var wsFrameRoot)) return;
 
-            DrawOdinProperty(wsFrameRoot.FrameSetting, "uiManagerSetting", container);
+            _uiSystemView.Draw(container, wsFrameRoot.FrameSetting);
         }
 
         private void DrawEventSystemSettings(VisualElement container)

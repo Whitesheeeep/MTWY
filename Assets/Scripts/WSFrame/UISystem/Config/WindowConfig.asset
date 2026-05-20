@@ -13,5 +13,7 @@ MonoBehaviour:
   m_Name: WindowConfig
   m_EditorClassIdentifier: 
   windowConfigList:
-  - windowName: TemplateWindow
-    windowPrefabPath: TemplateWindow
+  - windowName: TestWindow
+    windowPrefabPath: TestWindow
+  - windowName: TestWindow2
+    windowPrefabPath: TestWindow2
