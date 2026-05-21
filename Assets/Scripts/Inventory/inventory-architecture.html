@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Inventory Architecture</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      background: #f7f8fa;
+      color: #20242a;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      max-width: 1120px;
+    }
+
+    .lane {
+      border: 1px solid #d5dbe3;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 18px;
+      min-height: 420px;
+    }
+
+    .lane h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .box {
+      border: 1px solid #c7d0dc;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 12px 0;
+      background: #fbfcfe;
+      line-height: 1.5;
+    }
+
+    .box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .flow {
+      max-width: 1120px;
+      margin-top: 24px;
+      border: 1px solid #d5dbe3;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 18px;
+    }
+
+    .steps {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .step {
+      border: 1px solid #b8c4d4;
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #f4f7fb;
+    }
+
+    .arrow {
+      color: #64748b;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <h1>Inventory 模块结构</h1>
+
+  <section class="grid">
+    <div class="lane">
+      <h2>UI / MVVM</h2>
+      <div class="box">
+        <strong>InventoryBarView / InventoryBagView</strong>
+        前端显示、控件实例、点击转发。
+      </div>
+      <div class="box">
+        <strong>InventoryBarViewModel / InventoryBagViewModel</strong>
+        UI 状态、ViewData、用户意图入口。
+      </div>
+      <div class="box">
+        <strong>InventorySlotViewData</strong>
+        面向 View 的显示数据。
+      </div>
+    </div>
+
+    <div class="lane">
+      <h2>Core</h2>
+      <div class="box">
+        <strong>InventoryManager</strong>
+        对外入口，管理 Bar / Bag，触发变更事件。
+      </div>
+      <div class="box">
+        <strong>InventoryScheduler</strong>
+        协调 Bar 与 Bag 之间的移动、拆分、合并和拾取分配。
+      </div>
+      <div class="box">
+        <strong>InventoryData / InventorySlotData</strong>
+        背包数据和槽位数据。
+      </div>
+      <div class="box">
+        <strong>InventoryChangeSet</strong>
+        记录受影响槽位，用于局部刷新。
+      </div>
+    </div>
+
+    <div class="lane">
+      <h2>Runtime / Test</h2>
+      <div class="box">
+        <strong>ItemPickupCollector2D</strong>
+        场景拾取行为，将物品提交到 InventoryManager。
+      </div>
+      <div class="box">
+        <strong>InventoryOdinTester</strong>
+        Editor 下手动触发生产接口进行验证。
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+    <h2>普通拾取数据流</h2>
+    <div class="steps">
+      <div class="step">碰撞 Item</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">ItemPickupCollector2D</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">InventoryManager.AddItem</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">InventoryScheduler</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">Bar 优先</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">剩余进入 Bag</div>
+      <div class="arrow">-&gt;</div>
+      <div class="step">Changed 事件刷新 UI</div>
+    </div>
+  </section>
+</body>
+</html>

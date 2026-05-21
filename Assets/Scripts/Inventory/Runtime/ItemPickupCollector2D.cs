@@ -25,16 +25,10 @@ namespace Inventory
 
         private void TryCollect(Collider2D targetCollider)
         {
-            if (targetCollider == null)
-            {
-                return;
-            }
+            if (targetCollider == null) return;
 
             Item item = targetCollider.GetComponentInParent<Item>();
-            if (item == null || item.CurrentItem is { canPickedUp: false })
-            {
-                return;
-            }
+            if (item == null || item.CurrentItem is { canPickedUp: false }) return;
 
             InventoryManager manager = InventoryManager.Instance;
             if (manager == null)
@@ -43,23 +37,23 @@ namespace Inventory
                 return;
             }
 
-            try
+            if (!manager.TryAddItem(item.ItemId, PickupCount))
             {
-                if (!manager.TryAddItem(item.ItemId, PickupCount))
-                {
-                    Debug.Log($"[ItemPickupCollector2D] 背包空间不足，无法拾取 itemId: {item.ItemId}");
-                    return;
-                }
-                else
-                {
-                    WSLog.LogSuccess($"[ItemPickupCollector2D] 成功拾取 itemId: {item.ItemId}, count: {PickupCount}");
-                }
+                Debug.Log($"[ItemPickupCollector2D] 背包空间不足，无法拾取 itemId: {item.ItemId}");
+                return;
+            }
+            else
+            {
+                WSLog.LogSuccess($"[ItemPickupCollector2D] 成功拾取 itemId: {item.ItemId}, count: {PickupCount}");
+            }
+            /*try
+            {
             }
             catch (Exception exception)
             {
                 Debug.LogError($"[ItemPickupCollector2D] 拾取物品失败，itemId: {item.ItemId}, error: {exception.Message}");
                 return;
-            }
+            }*/
 
             Destroy(item.gameObject);
         }

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Text;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -5,154 +6,182 @@ using UnityEngine;
 namespace Inventory
 {
     /// <summary>
-    /// 基于 Odin Inspector 的背包手动测试组件，用于在 Inspector 中触发背包数据操作。
+    /// 基于 Odin Inspector 的背包手动测试组件，通过场景中的 InventoryManager 触发生产路径。
     /// </summary>
     public sealed class InventoryOdinTester : MonoBehaviour
     {
-        [InfoBox("这个组件用于在 Inspector 中测试 InventoryData 的各种操作。配置好参数后点击对应按钮即可执行操作，结果会打印在控制台中。")]
-
-        [Title("背包配置")]
-        [SerializeField] private int capacity = 30;
-        [SerializeField] private int maxStackCount = 64;
-
+        [InfoBox("这个组件只通过场景中的 InventoryManager 测试背包生产接口，不直接操作 InventoryData。")]
         [Title("操作参数")]
         [SerializeField] private int itemId = 1001;
         [SerializeField] private int count = 1;
         [SerializeField] private int fromIndex;
         [SerializeField] private int toIndex = 1;
 
-        [Title("测试数据")]
-        [SerializeField] private InventoryData data = new InventoryData();
-
         /// <summary>
-        /// 将测试背包重置为当前配置的容量。
+        /// 通过 InventoryManager 添加物品，用于测试 Bar 优先、剩余进入 Bag 的规则。
         /// </summary>
-        [Button("重置背包")]
-        public void ResetInventory()
+        [Button("Manager 添加物品")]
+        public void AddItemByManager()
         {
-            data = new InventoryData();
-            NormalizeData();
-            LogSlots("重置背包");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            int remaining = manager.AddItem(itemId, count);
+            Debug.Log($"[InventoryOdinTester] Manager 添加物品 itemId={itemId}, count={count}, remaining={remaining}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 向测试背包中加入当前配置的物品数量。
+        /// 通过 InventoryManager 移除物品。
         /// </summary>
-        [Button("添加物品")]
-        public void AddItem()
+        [Button("Manager 移除物品")]
+        public void RemoveItemByManager()
         {
-            NormalizeData();
-            int remaining = data.AddItem(itemId, count, maxStackCount);
-            LogSlots($"添加物品 itemId={itemId}, count={count}, remaining={remaining}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.RemoveItem(itemId, count);
+            Debug.Log($"[InventoryOdinTester] Manager 移除物品 itemId={itemId}, count={count}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 从测试背包中移除当前配置的物品数量。
+        /// 设置指定物品在 Bar 中的总数量。
         /// </summary>
-        [Button("移除物品")]
-        public void RemoveItem()
+        [Button("Manager 设置 Bar 数量")]
+        public void SetBarCountByManager()
         {
-            NormalizeData();
-            bool success = data.RemoveItem(itemId, count);
-            LogSlots($"移除物品 itemId={itemId}, count={count}, success={success}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.SetBarCount(itemId, count);
+            Debug.Log($"[InventoryOdinTester] Manager 设置 Bar 数量 itemId={itemId}, count={count}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 将指定物品设置为当前配置的总数量。
+        /// 设置指定物品在 Bag 中的总数量。
         /// </summary>
-        [Button("设置总数量")]
-        public void SetCount()
+        [Button("Manager 设置 Bag 数量")]
+        public void SetBagCountByManager()
         {
-            NormalizeData();
-            bool success = data.SetCount(itemId, count, maxStackCount);
-            LogSlots($"设置总数量 itemId={itemId}, count={count}, success={success}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.SetBagCount(itemId, count);
+            Debug.Log($"[InventoryOdinTester] Manager 设置 Bag 数量 itemId={itemId}, count={count}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 把来源槽位移动到目标槽位，目标槽位不同物品时会交换。
+        /// 移动 Bag 内部槽位。
         /// </summary>
-        [Button("移动槽位")]
-        public void MoveSlot()
+        [Button("Manager 移动 Bag 槽位")]
+        public void MoveBagSlotByManager()
         {
-            NormalizeData();
-            bool success = data.MoveSlot(fromIndex, toIndex, maxStackCount);
-            LogSlots($"移动槽位 from={fromIndex}, to={toIndex}, success={success}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.MoveBagSlot(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 移动 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 将来源槽位尽量合并到目标槽位。
+        /// 合并 Bag 内部槽位。
         /// </summary>
-        [Button("合并槽位")]
-        public void MergeSlots()
+        [Button("Manager 合并 Bag 槽位")]
+        public void MergeBagSlotsByManager()
         {
-            NormalizeData();
-            bool success = data.MergeSlots(fromIndex, toIndex, maxStackCount);
-            LogSlots($"合并槽位 from={fromIndex}, to={toIndex}, success={success}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.MergeBagSlots(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 合并 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 从来源槽位拆分当前配置数量到目标槽位。
+        /// 拆分 Bag 内部槽位。
         /// </summary>
-        [Button("拆分槽位")]
-        public void SplitSlot()
+        [Button("Manager 拆分 Bag 槽位")]
+        public void SplitBagSlotByManager()
         {
-            NormalizeData();
-            bool success = data.SplitSlot(fromIndex, count, toIndex, maxStackCount);
-            LogSlots($"拆分槽位 from={fromIndex}, to={toIndex}, count={count}, success={success}");
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            bool success = manager.SplitBagSlot(fromIndex, count, toIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 拆分 Bag 槽位 from={fromIndex}, to={toIndex}, count={count}, success={success}");
+            PrintManagerSlots();
         }
 
         /// <summary>
-        /// 清空测试背包中的所有槽位。
+        /// 打印场景中 InventoryManager 的 Bar 和 Bag 数据。
         /// </summary>
-        [Button("清空背包")]
-        public void Clear()
+        [Button("Manager 打印 Bar/Bag")]
+        public void PrintManagerSlots()
         {
-            NormalizeData();
-            data.Clear();
-            LogSlots("清空背包");
-        }
+            InventoryManager manager = GetManager();
+            if (manager == null)
+            {
+                return;
+            }
 
-        /// <summary>
-        /// 打印当前测试背包的所有槽位。
-        /// </summary>
-        [Button("打印槽位")]
-        public void PrintSlots()
-        {
-            NormalizeData();
-            LogSlots("打印槽位");
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine($"[InventoryOdinTester] Capacity Bag={manager.BagCapacity}, Max={manager.Capacity}, Bar={manager.BarCapacity}");
+            builder.AppendLine("[InventoryOdinTester] Manager Bar Slots");
+            AppendSlots(builder, manager.GetBarSlots());
+            builder.AppendLine("[InventoryOdinTester] Manager Bag Slots");
+            AppendSlots(builder, manager.GetBagSlots());
+            Debug.Log(builder.ToString());
         }
 
         private void OnValidate()
         {
-            capacity = Mathf.Max(0, capacity);
-            maxStackCount = Mathf.Max(1, maxStackCount);
             count = Mathf.Max(1, count);
-            NormalizeData();
         }
 
-        private void NormalizeData()
+        private static InventoryManager GetManager()
         {
-            if (data == null)
+            InventoryManager manager = InventoryManager.Instance;
+            if (manager == null)
             {
-                data = new InventoryData();
+                Debug.LogError("[InventoryOdinTester] 场景中不存在 InventoryManager。");
             }
 
-            data.NormalizeCapacity(capacity);
+            return manager;
         }
 
-        private void LogSlots(string title)
+        private static void AppendSlots(StringBuilder builder, System.Collections.Generic.IReadOnlyList<InventorySlotData> slots)
         {
-            StringBuilder builder = new StringBuilder();
-            builder.AppendLine($"[InventoryOdinTester] {title}");
-
-            for (int i = 0; i < data.SlotCount; i++)
+            for (int i = 0; i < slots.Count; i++)
             {
-                InventorySlotData slot = data.GetSlot(i);
+                InventorySlotData slot = slots[i];
                 string content = slot.IsEmpty ? "Empty" : $"itemId={slot.itemId}, count={slot.count}";
                 builder.AppendLine($"Slot {i}: {content}");
             }
-
-            Debug.Log(builder.ToString());
         }
     }
 }
+#endif

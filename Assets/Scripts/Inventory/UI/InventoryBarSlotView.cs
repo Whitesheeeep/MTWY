@@ -61,6 +61,16 @@ namespace WS_Modules.UIModule
                 itemCount.text = showCount ? data.count.ToString() : string.Empty;
             }
 
+            RefreshSelection(selected);
+        }
+
+        /// <summary>
+        /// 刷新当前槽位选中状态。
+        /// </summary>
+        /// <param name="selected">是否选中。</param>
+        public void RefreshSelection(bool selected)
+        {
+            EnsureReferences();
             if (chosenIcon != null)
             {
                 chosenIcon.SetActive(selected);

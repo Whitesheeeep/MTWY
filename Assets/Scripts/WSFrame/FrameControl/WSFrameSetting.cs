@@ -181,45 +181,42 @@ namespace WS_Modules
         [Serializable]
         public class UIManagerSetting
         {
-            [LabelText("UI 根节点存储路径")]
+            [Tooltip("UI 根节点预制体的资源加载路径。")]
             public string uiRootPath;
-            
-            [LabelText("UI Camera 预制体加载路径")]
+
+            [Tooltip("UI Camera 预制体的资源加载路径。")]
             public string uiCameraPrefabPath;
-            
-            [LabelText("UI EventSystem 预制体加载路径")]
+
+            [Tooltip("UI EventSystem 预制体的资源加载路径。")]
             public string uiEventSystemPrefabPath;
-            
-            [LabelText("窗口预制体加载路径")]
+
+            [Tooltip("窗口配置表，记录窗口名称和窗口预制体加载路径。")]
             public WindowConfig windowConfig;
-            
-            [LabelText("是否单遮")]
+
+            [Tooltip("是否使用单遮罩模式。启用后 UIManager 会在当前顶层窗口上显示唯一遮罩。")]
             public bool isSingleMask;
-            
-#if ODIN_INSPECTOR
-            [TitleGroup("脚本自动化生成路径配置", "自定义生成路径"), LabelText("组件绑定脚本生成路径"), FolderPath]
-#endif
-            public string BindComponentGeneratorPath =  "";
-#if ODIN_INSPECTOR
-            [TitleGroup("脚本自动化生成路径配置", "自定义生成路径"), LabelText("组件脚本命名空间")]
-#endif
-            public string BindComponentNameSpace =  "";
-#if ODIN_INSPECTOR
-            [TitleGroup("脚本自动化生成路径配置", "自定义生成路径"), LabelText("窗口交互脚本生成路径"), FolderPath]
-#endif
-            public string WindowGeneratorPath ="";
-#if ODIN_INSPECTOR
-            [TitleGroup("脚本自动化生成路径配置", "自定义生成路径"), LabelText("item脚本生成路径"), FolderPath]
-#endif
-            public string ItemScriptsGeneratorPath ="";
-#if ODIN_INSPECTOR
-            [TitleGroup("窗口预制体加载路径配置","框架根据以下路径自动计算加载路径，新增窗口无需手动配置"), LabelText("窗口预制体存放路径"), FolderPath]
-#endif
+
+            [Tooltip("组件绑定脚本生成路径。")]
+            [WSFolderPath]
+            public string BindComponentGeneratorPath = "";
+
+            [Tooltip("组件绑定脚本生成时使用的命名空间。")]
+            public string BindComponentNameSpace = "";
+
+            [Tooltip("窗口交互脚本生成路径。")]
+            [WSFolderPath]
+            public string WindowGeneratorPath = "";
+
+            [Tooltip("Item 脚本生成路径。")]
+            [WSFolderPath]
+            public string ItemScriptsGeneratorPath = "";
+
+            [Tooltip("窗口预制体存放路径。框架会根据这些路径自动计算窗口加载路径，新增窗口无需手动配置。")]
+            [WSFolderPath]
             public string[] WindowPrefabFolderPathArr;
-    
-#if ODIN_INSPECTOR
-            [TitleGroup("自动生成脚本命名空间引入配置","框架根据以下命名空间在生成脚本时自动Using"), LabelText("命名空间配置"), FolderPath]
-#endif
+
+            [Tooltip("自动生成脚本时需要额外引入的命名空间。")]
+            [WSFolderPath]
             public string[] UsingNameSpaceArr;
         }
     }

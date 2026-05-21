@@ -17,3 +17,7 @@ MonoBehaviour:
     windowPrefabPath: TestWindow
   - windowName: TestWindow2
     windowPrefabPath: TestWindow2
+  - windowName: BagWindow
+    windowPrefabPath: BagWindow
+  - windowName: GlobalUIWindow
+    windowPrefabPath: GlobalUIWindow
