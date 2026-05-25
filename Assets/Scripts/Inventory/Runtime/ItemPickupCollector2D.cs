@@ -1,4 +1,3 @@
-using System;
 using GameData;
 using UnityEngine;
 using WS_Modules.LogModule;
@@ -11,8 +10,6 @@ namespace Inventory
     [DisallowMultipleComponent]
     public sealed class ItemPickupCollector2D : MonoBehaviour
     {
-        private const int PickupCount = 1;
-
         private void OnTriggerEnter2D(Collider2D other)
         {
             TryCollect(other);
@@ -37,24 +34,23 @@ namespace Inventory
                 return;
             }
 
-            if (!manager.TryAddItem(item.ItemId, PickupCount))
+            int pickupCount = item.Count;
+            int remaining = manager.AddItem(item.ItemId, pickupCount);
+            int pickedCount = pickupCount - remaining;
+            if (pickedCount <= 0)
             {
                 Debug.Log($"[ItemPickupCollector2D] 背包空间不足，无法拾取 itemId: {item.ItemId}");
                 return;
             }
-            else
-            {
-                WSLog.LogSuccess($"[ItemPickupCollector2D] 成功拾取 itemId: {item.ItemId}, count: {PickupCount}");
-            }
-            /*try
-            {
-            }
-            catch (Exception exception)
-            {
-                Debug.LogError($"[ItemPickupCollector2D] 拾取物品失败，itemId: {item.ItemId}, error: {exception.Message}");
-                return;
-            }*/
 
+            if (remaining > 0)
+            {
+                item.SetCount(remaining);
+                WSLog.LogSuccess($"[ItemPickupCollector2D] 部分拾取 itemId: {item.ItemId}, picked={pickedCount}, remaining={remaining}");
+                return;
+            }
+
+            WSLog.LogSuccess($"[ItemPickupCollector2D] 成功拾取 itemId: {item.ItemId}, count: {pickedCount}");
             Destroy(item.gameObject);
         }
     }

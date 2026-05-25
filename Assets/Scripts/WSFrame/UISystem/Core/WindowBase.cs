@@ -10,7 +10,7 @@ namespace WS_Modules.UIModule
 {
     public abstract class WindowBase : WindowBehaviour
     {
-        // 用于控制UI交互的CanvasGroup组件，作为 mask 用于阻挡点击事件穿透
+        // 可选遮罩节点，用于阻挡点击事件穿透；窗口允许没有 UIMask
         private CanvasGroup _UIMaskCanvasGroup;
         // 用于控制UI交互的CanvasGroup组件，作为窗口本体的交互控制，可以通过调整 alpha 和 interactable 来实现淡入淡出和交互控制
         private CanvasGroup _CanvasGroup;
@@ -88,11 +88,6 @@ namespace WS_Modules.UIModule
             _CanvasGroup = Transform.GetOrAddComponent<CanvasGroup>();
             _UIMaskCanvasGroup = Transform.Find("UIMask")?.GetOrAddComponent<CanvasGroup>();
             _UIContent = Transform.Find("UIContent")?.transform;
-
-            if (_UIMaskCanvasGroup == null)
-            {
-                WSLog.LogWarning($"{Name} 缺少 UIMask 节点，遮罩显示和弹窗遮罩动画将被跳过");
-            }
 
             if (_UIContent == null)
             {

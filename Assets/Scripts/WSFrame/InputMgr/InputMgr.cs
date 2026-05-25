@@ -140,32 +140,6 @@ namespace WS_Modules.InputModule
         {
             // 新输入系统通常是基于回调的，但如果需要每帧检查也可以在这里处理
         }
-
-        /*/// <summary>
-        /// 绑定新输入系统的 Action 回调
-        /// </summary>
-        public void BindNewInputAction(InputAction action)
-        {
-            defaultInputSystem.Player.Move.ReadValue<Vector2>();
-            action.started += OnActionStarted;
-            action.performed += OnActionPerformed;
-            action.canceled += OnActionCanceled;
-        }*/
-
-        /*private void OnActionStarted(InputAction.CallbackContext context)
-        {
-            EventSystem.EventTrigger_Int((int)EventSystem.E_InputEvent.OnNewInputActionStarted, context);
-        }
-
-        private void OnActionPerformed(InputAction.CallbackContext context)
-        {
-            EventSystem.EventTrigger_Int((int)EventSystem.E_InputEvent.OnNewInputActionPerformed, context);
-        }
-
-        private void OnActionCanceled(InputAction.CallbackContext context)
-        {
-            EventSystem.EventTrigger_Int((int)EventSystem.E_InputEvent.OnNewInputActionCanceled, context);
-        }*/
 #endif
         #endregion
     }

@@ -21,8 +21,8 @@ MonoBehaviour:
     worldIcon: {fileID: 21300000, guid: 58c6799e544ae49a48186335b7f16ba0, type: 3}
     itemUseRadius: 1
     canPickedUp: 1
-    canDropped: 0
-    canCarried: 0
+    canDropped: 1
+    canCarried: 1
     price: 0
     sellPercent: 0
   - Id: 1002

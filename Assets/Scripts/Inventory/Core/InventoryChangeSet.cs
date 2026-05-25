@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Inventory
 {
     /// <summary>
-    /// 背包数据变更集合，用于记录 Bar 和 Bag 中受影响的槽位索引。
+    /// 单次背包操作的变更收集上下文，背包数据变更集合，用于记录 Bar 和 Bag 中受影响的槽位索引。
     /// </summary>
     public class InventoryChangeSet
     {

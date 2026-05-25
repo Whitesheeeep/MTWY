@@ -16,12 +16,18 @@ namespace WS_Modules.UIModule
     {
         private const float BorderWidth = 1f;
 
-        [SerializeField] private InventoryBarSlotView slotPrefab;
+        [SerializeField] private InventorySlotView slotPrefab;
         [SerializeField] private Transform slotRoot;
         [SerializeField] private int visibleSlotCount = 10;
 
-        private readonly List<InventoryBarSlotView> slots = new List<InventoryBarSlotView>();
+        private readonly List<InventorySlotView> slots = new List<InventorySlotView>();
         private Action<int> onSlotClicked;
+        private Action<InventorySlotDragEventArgs> onSlotDragStarted;
+        private Action<InventorySlotDragEventArgs> onSlotDragging;
+        private Action<InventorySlotDragEventArgs> onSlotDragEnded;
+        private Action<InventorySlotDragEventArgs> onSlotDragEntered;
+        private Action<InventorySlotDragEventArgs> onSlotDragExited;
+        private Action<InventorySlotDropEventArgs> onSlotDropped;
         private bool layoutCacheValid;
         private int lastLayoutSlotCount = -1;
         private float lastLayoutSlotWidth = -1f;
@@ -49,7 +55,35 @@ namespace WS_Modules.UIModule
         /// <param name="slotClickedCallback">槽位被点击时触发的回调。</param>
         public void Initialize(Action<int> slotClickedCallback)
         {
+            Initialize(slotClickedCallback, null, null, null, null, null, null);
+        }
+
+        /// <summary>
+        /// 初始化快捷栏点击和拖拽回调并确保槽位实例存在。
+        /// </summary>
+        /// <param name="slotClickedCallback">槽位被点击时触发的回调。</param>
+        /// <param name="slotDragStartedCallback">槽位开始拖拽时触发的回调。</param>
+        /// <param name="slotDraggingCallback">槽位拖拽过程中触发的回调。</param>
+        /// <param name="slotDragEndedCallback">槽位拖拽结束时触发的回调。</param>
+        /// <param name="slotDragEnteredCallback">拖拽进入槽位时触发的回调。</param>
+        /// <param name="slotDragExitedCallback">拖拽离开槽位时触发的回调。</param>
+        /// <param name="slotDroppedCallback">拖拽释放到槽位时触发的回调。</param>
+        public void Initialize(
+            Action<int> slotClickedCallback,
+            Action<InventorySlotDragEventArgs> slotDragStartedCallback,
+            Action<InventorySlotDragEventArgs> slotDraggingCallback,
+            Action<InventorySlotDragEventArgs> slotDragEndedCallback,
+            Action<InventorySlotDragEventArgs> slotDragEnteredCallback,
+            Action<InventorySlotDragEventArgs> slotDragExitedCallback,
+            Action<InventorySlotDropEventArgs> slotDroppedCallback)
+        {
             onSlotClicked = slotClickedCallback;
+            onSlotDragStarted = slotDragStartedCallback;
+            onSlotDragging = slotDraggingCallback;
+            onSlotDragEnded = slotDragEndedCallback;
+            onSlotDragEntered = slotDragEnteredCallback;
+            onSlotDragExited = slotDragExitedCallback;
+            onSlotDropped = slotDroppedCallback;
             EnsureSlotInstances(true);
         }
 
@@ -111,10 +145,33 @@ namespace WS_Modules.UIModule
         public void ClearSlots()
         {
             EnsureSlotInstances(false);
-            foreach (InventoryBarSlotView slot in slots)
+            foreach (InventorySlotView slot in slots)
             {
                 slot.Clear();
             }
+        }
+
+        /// <summary>
+        /// 刷新指定快捷栏槽位的拖拽放置预览。
+        /// </summary>
+        /// <param name="index">槽位索引。</param>
+        /// <param name="canDrop">是否显示为可放置。</param>
+        public void RefreshDropPreview(int index, bool canDrop)
+        {
+            EnsureSlotInstances(false);
+            if (index < 0 || index >= slots.Count || !slots[index].gameObject.activeSelf) return;
+
+            slots[index].RefreshDropPreview(canDrop);
+        }
+
+        /// <summary>
+        /// 清理全部快捷栏槽位的拖拽放置预览。
+        /// </summary>
+        public void ClearDropPreview()
+        {
+            EnsureSlotInstances(false);
+            foreach (InventorySlotView slot in slots)
+                slot.ClearDropPreview();
         }
 
         private void Reset()
@@ -158,7 +215,7 @@ namespace WS_Modules.UIModule
 
             if (slotPrefab == null)
             {
-                InventoryBarSlotView foundSlotPrefab = GetComponentInChildren<InventoryBarSlotView>(true);
+                InventorySlotView foundSlotPrefab = GetComponentInChildren<InventorySlotView>(true);
                 if (foundSlotPrefab != null)
                 {
                     Undo.RecordObject(this, "Assign Inventory Bar Slot Prefab");
@@ -177,12 +234,12 @@ namespace WS_Modules.UIModule
                 return;
             }
 
-            List<InventoryBarSlotView> editorSlots = CollectDirectSlotViews();
+            List<InventorySlotView> editorSlots = CollectDirectSlotViews();
             int targetCount = VisibleSlotCount;
             SyncInventoryManagerBarCapacity(targetCount);
             while (editorSlots.Count < targetCount)
             {
-                InventoryBarSlotView slot = CreateEditorSlot(editorSlots.Count);
+                InventorySlotView slot = CreateEditorSlot(editorSlots.Count);
                 if (slot == null)
                 {
                     break;
@@ -227,7 +284,7 @@ namespace WS_Modules.UIModule
             }
         }
 
-        private InventoryBarSlotView CreateEditorSlot(int index)
+        private InventorySlotView CreateEditorSlot(int index)
         {
             GameObject slotObject = null;
             if (PrefabUtility.IsPartOfPrefabAsset(slotPrefab.gameObject))
@@ -247,15 +304,15 @@ namespace WS_Modules.UIModule
 
             Undo.RegisterCreatedObjectUndo(slotObject, "Create Inventory Bar Slot");
             slotObject.name = $"BarItem ({index + 1})";
-            return slotObject.GetComponent<InventoryBarSlotView>();
+            return slotObject.GetComponent<InventorySlotView>();
         }
 
-        private List<InventoryBarSlotView> CollectDirectSlotViews()
+        private List<InventorySlotView> CollectDirectSlotViews()
         {
-            List<InventoryBarSlotView> result = new List<InventoryBarSlotView>();
+            List<InventorySlotView> result = new List<InventorySlotView>();
             for (int i = 0; i < slotRoot.childCount; i++)
             {
-                InventoryBarSlotView slot = slotRoot.GetChild(i).GetComponent<InventoryBarSlotView>();
+                InventorySlotView slot = slotRoot.GetChild(i).GetComponent<InventorySlotView>();
                 if (slot != null)
                 {
                     result.Add(slot);
@@ -286,7 +343,7 @@ namespace WS_Modules.UIModule
             slotRoot ??= transform;
             if (slotPrefab == null)
             {
-                slotPrefab = GetComponentInChildren<InventoryBarSlotView>(true);
+                slotPrefab = GetComponentInChildren<InventorySlotView>(true);
             }
 
             if (slotPrefab == null)
@@ -295,7 +352,7 @@ namespace WS_Modules.UIModule
                 return;
             }
 
-            if (!slots.Contains(slotPrefab))
+            if (slots.Count == 0 || slots.Exists(s => s == null))
             {
                 slots.Clear();
                 CollectExistingSlots();
@@ -305,7 +362,7 @@ namespace WS_Modules.UIModule
             int targetCount = VisibleSlotCount;
             for (int i = slots.Count; i < targetCount; i++)
             {
-                InventoryBarSlotView slot = Instantiate(slotPrefab, slotRoot);
+                InventorySlotView slot = Instantiate(slotPrefab, slotRoot);
                 slot.gameObject.name = $"BarItem ({i + 1})";
                 slots.Add(slot);
                 layoutCacheValid = false;
@@ -322,7 +379,16 @@ namespace WS_Modules.UIModule
 
                 if (active)
                 {
-                    slots[i].Initialize(i, OnSlotClicked);
+                    slots[i].Initialize(
+                        i,
+                        InventorySlotArea.Bar,
+                        OnSlotClicked,
+                        OnSlotDragStarted,
+                        OnSlotDragging,
+                        OnSlotDragEnded,
+                        OnSlotDragEntered,
+                        OnSlotDragExited,
+                        OnSlotDropped);
                 }
             }
 
@@ -341,6 +407,36 @@ namespace WS_Modules.UIModule
         private void OnSlotClicked(int index)
         {
             onSlotClicked?.Invoke(index);
+        }
+
+        private void OnSlotDragStarted(InventorySlotDragEventArgs eventArgs)
+        {
+            onSlotDragStarted?.Invoke(eventArgs);
+        }
+
+        private void OnSlotDragging(InventorySlotDragEventArgs eventArgs)
+        {
+            onSlotDragging?.Invoke(eventArgs);
+        }
+
+        private void OnSlotDragEnded(InventorySlotDragEventArgs eventArgs)
+        {
+            onSlotDragEnded?.Invoke(eventArgs);
+        }
+
+        private void OnSlotDragEntered(InventorySlotDragEventArgs eventArgs)
+        {
+            onSlotDragEntered?.Invoke(eventArgs);
+        }
+
+        private void OnSlotDragExited(InventorySlotDragEventArgs eventArgs)
+        {
+            onSlotDragExited?.Invoke(eventArgs);
+        }
+
+        private void OnSlotDropped(InventorySlotDropEventArgs eventArgs)
+        {
+            onSlotDropped?.Invoke(eventArgs);
         }
 
         private static InventorySlotViewData GetSlotData(IReadOnlyList<InventorySlotViewData> dataList, int index)

@@ -24,10 +24,9 @@ namespace Inventory
         [ReadOnly]
         [SerializeField] private InventoryData bagData = new InventoryData();
 
-        private readonly EventCenterModule<int> eventModule = new EventCenterModule<int>();
+        private readonly IEventCenter<int> eventModule = new EventCenterModule<int>();
         private IItemDatabase itemDatabase;
         private InventoryScheduler scheduler;
-        private bool eventModuleInitialized;
 
         /// <summary>
         /// Bar 槽位容量。
@@ -52,8 +51,9 @@ namespace Inventory
         protected override void Awake()
         {
             base.Awake();
-            EnsureEventModule();
+            // 背包和 bar 栏的数据初始化
             EnsureData();
+            // 数据库拉取
             Initialize();
         }
 
@@ -78,49 +78,16 @@ namespace Inventory
             EnsureData();
         }
 
-        /// <summary>
-        /// 注册 Bar 单个槽位变化事件。
-        /// </summary>
-        /// <param name="handler">事件回调。</param>
-        /// <returns>用于取消注册的句柄。</returns>
-        public IUnRegister RegisterBarSlotChanged(Action<InventorySlotChangedEventArgs> handler)
-        {
-            EnsureEventModule();
-            return eventModule.Register((int)InventoryEventType.BarSlotChanged, handler);
-        }
+        #region 事件注册
+        public IUnRegister RegisterBarSlotChanged(Action<InventorySlotChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BarSlotChanged, handler);
 
-        /// <summary>
-        /// 注册 Bag 单个槽位变化事件。
-        /// </summary>
-        /// <param name="handler">事件回调。</param>
-        /// <returns>用于取消注册的句柄。</returns>
-        public IUnRegister RegisterBagSlotChanged(Action<InventorySlotChangedEventArgs> handler)
-        {
-            EnsureEventModule();
-            return eventModule.Register((int)InventoryEventType.BagSlotChanged, handler);
-        }
 
-        /// <summary>
-        /// 注册 Bar 槽位列表整体变化事件。
-        /// </summary>
-        /// <param name="handler">事件回调。</param>
-        /// <returns>用于取消注册的句柄。</returns>
-        public IUnRegister RegisterBarSlotsChanged(Action<InventorySlotsChangedEventArgs> handler)
-        {
-            EnsureEventModule();
-            return eventModule.Register((int)InventoryEventType.BarSlotsChanged, handler);
-        }
+        public IUnRegister RegisterBagSlotChanged(Action<InventorySlotChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BagSlotChanged, handler);
 
-        /// <summary>
-        /// 注册 Bag 槽位列表整体变化事件。
-        /// </summary>
-        /// <param name="handler">事件回调。</param>
-        /// <returns>用于取消注册的句柄。</returns>
-        public IUnRegister RegisterBagSlotsChanged(Action<InventorySlotsChangedEventArgs> handler)
-        {
-            EnsureEventModule();
-            return eventModule.Register((int)InventoryEventType.BagSlotsChanged, handler);
-        }
+        public IUnRegister RegisterBarSlotsChanged(Action<InventorySlotsChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BarSlotsChanged, handler);
+
+        public IUnRegister RegisterBagSlotsChanged(Action<InventorySlotsChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BagSlotsChanged, handler);
+        #endregion
 
         /// <summary>
         /// 向背包中加入物品，优先进入 Bar，Bar 放不下的剩余物品进入 Bag。
@@ -175,10 +142,7 @@ namespace Inventory
             NormalizeSettings();
             EnsureData();
 
-            if (additionalSlotCount <= 0 || bagCapacity + additionalSlotCount > capacity)
-            {
-                return false;
-            }
+            if (additionalSlotCount <= 0 || bagCapacity + additionalSlotCount > capacity) return false;
 
             bagCapacity += additionalSlotCount;
             bagData.ExpandCapacity(additionalSlotCount);
@@ -256,6 +220,28 @@ namespace Inventory
             bool success = scheduler.MoveBarSlot(fromIndex, toIndex, maxStackCount, changeSet);
             NotifyChangeSet(changeSet);
             return success;
+        }
+
+        /// <summary>
+        /// 将 Bar 指定槽位整格丢弃到世界中，成功后通过全局事件中心通知世界生成掉落物。
+        /// </summary>
+        /// <param name="barIndex">Bar 槽位索引。</param>
+        /// <returns>丢弃成功返回 true。</returns>
+        public bool DropBarSlotToWorld(int barIndex)
+        {
+            Debug.Log($"[InventoryManager] 请求丢弃 Bar 槽位 index={barIndex}");
+            return DropSlotToWorld(barData, barIndex, true);
+        }
+
+        /// <summary>
+        /// 将 Bag 指定槽位整格丢弃到世界中，成功后通过全局事件中心通知世界生成掉落物。
+        /// </summary>
+        /// <param name="bagIndex">Bag 槽位索引。</param>
+        /// <returns>丢弃成功返回 true。</returns>
+        public bool DropBagSlotToWorld(int bagIndex)
+        {
+            Debug.Log($"[InventoryManager] 请求丢弃 Bag 槽位 index={bagIndex}");
+            return DropSlotToWorld(bagData, bagIndex, false);
         }
 
         /// <summary>
@@ -550,6 +536,62 @@ namespace Inventory
             return success;
         }
 
+        private bool DropSlotToWorld(InventoryData targetData, int index, bool isBar)
+        {
+            EnsureData();
+            string areaName = isBar ? "Bar" : "Bag";
+            if (index < 0 || index >= targetData.SlotCount)
+            {
+                Debug.LogWarning($"[InventoryManager] 丢弃失败：{areaName} 槽位索引无效 index={index}, slotCount={targetData.SlotCount}");
+                return false;
+            }
+
+            InventorySlotData slot = targetData.GetSlot(index);
+            if (slot.IsEmpty)
+            {
+                Debug.LogWarning($"[InventoryManager] 丢弃失败：{areaName} 槽位为空 index={index}");
+                return false;
+            }
+
+            EnsureItemExists(slot.itemId);
+            if (!itemDatabase.TryGet(slot.itemId, out ItemData itemData))
+            {
+                Debug.LogWarning($"[InventoryManager] 丢弃失败：未找到物品配置 itemId={slot.itemId}");
+                return false;
+            }
+
+            if (!itemData.canDropped)
+            {
+                Debug.LogWarning($"[InventoryManager] 丢弃失败：物品配置不允许丢弃 itemId={slot.itemId}, count={slot.count}");
+                return false;
+            }
+
+            // check 完毕
+            List<int> changed = new List<int>();
+            if (!targetData.RemoveFromSlot(index, slot.count, changed))
+            {
+                Debug.LogWarning($"[InventoryManager] 丢弃失败：移除槽位数据失败 area={areaName}, index={index}, itemId={slot.itemId}, count={slot.count}");
+                return false;
+            }
+
+            InventoryChangeSet changeSet = new InventoryChangeSet();
+            if (isBar) changeSet.AddBarSlots(changed);
+            else changeSet.AddBagSlots(changed);
+
+            NotifyChangeSet(changeSet);
+            Debug.Log($"[InventoryManager] 丢弃成功并准备触发世界生成事件 area={areaName}, index={index}, itemId={slot.itemId}, count={slot.count}");
+            TriggerDropWorldItem(slot.itemId, slot.count);
+            return true;
+        }
+
+        private static void TriggerDropWorldItem(int itemId, int count)
+        {
+            Debug.Log($"[InventoryManager] 触发全局丢弃事件 event={E_InventoryEvent.DropWorldItemRequested}, itemId={itemId}, count={count}");
+            WS_Modules.CustomEventSystem.EventSystem.EventTrigger_Int(
+                (int)E_InventoryEvent.DropWorldItemRequested,
+                new InventoryDropWorldItemEventArgs(itemId, count));
+        }
+
         private void EnsureData()
         {
             NormalizeSettings();
@@ -604,7 +646,7 @@ namespace Inventory
                 return;
             }
 
-            EnsureEventModule();
+            // bar 检查
             if (changeSet.BarAllChanged)
             {
                 eventModule.EventTrigger(
@@ -621,6 +663,7 @@ namespace Inventory
                 }
             }
 
+            // bag 检查
             if (changeSet.BagAllChanged)
             {
                 eventModule.EventTrigger(
@@ -638,20 +681,7 @@ namespace Inventory
             }
         }
 
-        private void EnsureEventModule()
-        {
-            if (eventModuleInitialized)
-            {
-                return;
-            }
-
-            eventModuleInitialized = true;
-            eventModule.Register<InventorySlotChangedEventArgs>((int)InventoryEventType.BarSlotChanged, _ => { });
-            eventModule.Register<InventorySlotChangedEventArgs>((int)InventoryEventType.BagSlotChanged, _ => { });
-            eventModule.Register<InventorySlotsChangedEventArgs>((int)InventoryEventType.BarSlotsChanged, _ => { });
-            eventModule.Register<InventorySlotsChangedEventArgs>((int)InventoryEventType.BagSlotsChanged, _ => { });
-        }
-
+        // 尝试从 GameDatabase 拉取 IItemDatabase，成功后赋值并返回 true，失败返回 false。
         private void EnsureInitialized()
         {
             if (itemDatabase != null)

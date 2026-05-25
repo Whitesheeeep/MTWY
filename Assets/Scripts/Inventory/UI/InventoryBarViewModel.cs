@@ -114,6 +114,22 @@ namespace WS_Modules.UIModule
         }
 
         /// <summary>
+        /// 将 Bar 槽位移动到 Bag 槽位。
+        /// </summary>
+        public bool MoveToBag(int barIndex, int bagIndex)
+        {
+            return manager.MoveBarToBag(barIndex, bagIndex);
+        }
+
+        /// <summary>
+        /// 将 Bar 指定槽位整格丢弃到世界中。
+        /// </summary>
+        public bool DropSlotToWorld(int index)
+        {
+            return manager.DropBarSlotToWorld(index);
+        }
+
+        /// <summary>
         /// 使用指定 Bar 槽位。
         /// </summary>
         public bool UseSlot(int index)
@@ -151,7 +167,10 @@ namespace WS_Modules.UIModule
 
         private InventorySlotViewData CreateViewData(int index, InventorySlotData slot)
         {
-            return InventorySlotViewDataMapper.Create(index, slot.itemId, slot.count, GetItemData);
+            if (slot.IsEmpty) return InventorySlotViewData.Empty(index);
+
+            ItemData itemData = GetItemData(slot.itemId);
+            return new InventorySlotViewData(index, slot.itemId, slot.count, itemData?.icon);
         }
 
         private ItemData GetItemData(int itemId)

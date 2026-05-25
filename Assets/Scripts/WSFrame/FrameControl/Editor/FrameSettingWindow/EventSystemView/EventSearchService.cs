@@ -10,6 +10,7 @@ namespace WS_Modules
     {
         private const string RegisterPattern = "EventSystem.Register_";
         private const string TriggerPattern = "EventSystem.EventTrigger_";
+        private const int MaxInvocationLineSpan = 16;
 
         public Dictionary<string, EventSystemInfo> SearchEventSystems()
         {
@@ -36,14 +37,12 @@ namespace WS_Modules
                 var script = LoadScript(file);
                 for (var i = 0; i < lines.Length; i++)
                 {
-                    int sourceLine = i + 1;
-                    var line = lines[i];
-                    if (TryCollectLineInfo(cache, line, sourceLine, script, RegisterPattern, true))
+                    if (TryCollectLineInfo(cache, lines, ref i, script, RegisterPattern, true))
                     {
                         continue;
                     }
 
-                    TryCollectLineInfo(cache, line, sourceLine, script, TriggerPattern, false);
+                    TryCollectLineInfo(cache, lines, ref i, script, TriggerPattern, false);
                 }
             }
 
@@ -74,20 +73,37 @@ namespace WS_Modules
             }
         }
 
-        private static bool TryCollectLineInfo(Dictionary<string, EventSystemInfo> cache, string line, int lineNum,
-            MonoScript script, string pattern, bool isRegister)
+        private static bool TryCollectLineInfo(Dictionary<string, EventSystemInfo> cache, string[] lines,
+            ref int lineIndex, MonoScript script, string pattern, bool isRegister)
         {
+            int sourceLine = lineIndex + 1;
+            string line = lines[lineIndex];
             if (line.TrimStart().StartsWith("//") || !line.Contains(pattern, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            if (!TryExtractEventKeyExpression(line, pattern, out string eventName))
+            string invocationText = string.Empty;
+            int maxLineIndex = Math.Min(lines.Length - 1, lineIndex + MaxInvocationLineSpan - 1);
+            for (int i = lineIndex; i <= maxLineIndex; i++)
+            {
+                invocationText += " " + lines[i].Trim();
+                if (!TryExtractEventKeyExpression(invocationText, pattern, out string eventName))
+                {
+                    continue;
+                }
+
+                RecordEventInfo(cache, script, eventName, sourceLine, isRegister);
+                lineIndex = i;
+                return true;
+            }
+
+            if (!TryExtractEventKeyExpression(line, pattern, out string fallbackEventName))
             {
                 return false;
             }
 
-            RecordEventInfo(cache, script, eventName, lineNum, isRegister);
+            RecordEventInfo(cache, script, fallbackEventName, sourceLine, isRegister);
             return true;
         }
 

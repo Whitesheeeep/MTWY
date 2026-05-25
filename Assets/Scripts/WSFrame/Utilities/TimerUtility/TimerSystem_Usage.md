@@ -158,6 +158,62 @@ public enum TimerTags
 - `Detached`：容器迁移中的临时状态。
 - `Recycled`：已回收。
 
+## 适用场景
+
+`TimerManager` 适合处理“到时间再执行”或“低频逻辑 Tick”的任务：
+
+- 延迟执行：例如 0.5 秒后关闭提示、3 秒后销毁临时特效、1 秒后恢复按钮点击。
+- 冷却和倒计时：例如技能 CD、商店刷新倒计时、制作剩余时间。
+- 低频轮询：例如每 0.2 秒检查附近交互物、每 1 秒刷新状态提示、每 5 秒自动保存。
+- 周期性规则结算：例如中毒每 1 秒掉血、回血光环每 0.5 秒结算、农作物定时成长。
+- 临时状态到期：例如 Buff 持续时间、无敌帧、交互锁定、提示高亮自动消失。
+
+如果只需要到期回调，不要设置 `OnUpdate`，让 Timer 走最小堆调度即可。只有需要实时进度显示时，才使用 `OnUpdate`。
+
+## 不适用场景
+
+以下场景通常不建议用 `TimerManager` 替代 `Update`、Tween、动画系统或物理系统：
+
+- 跟手输入：例如拖拽物体跟随鼠标、镜头跟随鼠标、摇杆持续移动。
+- 连续视觉运动：例如平滑滚动、拖拽边缘滚动、UI 跟随、镜头平滑插值。
+- 物理相关逻辑：例如刚体移动、力、碰撞相关判断，应使用 Unity 物理生命周期。
+- 每帧精确输入状态：例如鼠标按住拖动、按键持续输入、悬停实时反馈。
+
+这类逻辑追求连续反馈和低延迟，使用低频 Timer 会产生阶梯感或响应延迟。
+
+## 低频 Timer 与 DeltaTime
+
+低频 Timer 的回调仍然是在 Unity 某一帧中执行的，因此 `Time.deltaTime` / `Time.unscaledDeltaTime` 表示的是“当前帧间隔”，不是“距离上次 Timer 回调的间隔”。
+
+例如每 `0.1f` 秒执行一次滚动：
+
+```csharp
+TimerManager.Register(0.1f, OnTick)
+    .SetLoop(-1)
+    .SetUnscaledTime(true);
+```
+
+如果 `OnTick` 中使用 `Time.unscaledDeltaTime`：
+
+```csharp
+scrollY += speed * Time.unscaledDeltaTime;
+```
+
+在 60 FPS 下，每次 Tick 只会乘以约 `0.016f`，而不是 `0.1f`，实际速度会明显变慢。低频 Tick 应使用已知间隔或自行记录上次触发时间：
+
+```csharp
+const float interval = 0.1f;
+
+TimerManager.Register(interval, () =>
+{
+    scrollY += speed * interval;
+})
+    .SetLoop(-1)
+    .SetUnscaledTime(true);
+```
+
+如果目标是平滑、跟手、连续的视觉运动，优先使用 `Update` 或 Tween，而不是低频 Timer。
+
 ## 注意事项
 
 1. `OnUpdate` 会让 Timer 进入逐帧列表，因此只在确实需要进度时使用。

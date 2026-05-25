@@ -16,6 +16,9 @@ namespace Inventory
         [SerializeField] private int count = 1;
         [SerializeField] private int fromIndex;
         [SerializeField] private int toIndex = 1;
+        [SerializeField] private int barIndex;
+        [SerializeField] private int bagIndex;
+        [SerializeField] private int expandSlotCount = 5;
 
         /// <summary>
         /// 通过 InventoryManager 添加物品，用于测试 Bar 优先、剩余进入 Bag 的规则。
@@ -24,10 +27,7 @@ namespace Inventory
         public void AddItemByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             int remaining = manager.AddItem(itemId, count);
             Debug.Log($"[InventoryOdinTester] Manager 添加物品 itemId={itemId}, count={count}, remaining={remaining}");
@@ -41,10 +41,7 @@ namespace Inventory
         public void RemoveItemByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.RemoveItem(itemId, count);
             Debug.Log($"[InventoryOdinTester] Manager 移除物品 itemId={itemId}, count={count}, success={success}");
@@ -58,10 +55,7 @@ namespace Inventory
         public void SetBarCountByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.SetBarCount(itemId, count);
             Debug.Log($"[InventoryOdinTester] Manager 设置 Bar 数量 itemId={itemId}, count={count}, success={success}");
@@ -75,13 +69,24 @@ namespace Inventory
         public void SetBagCountByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.SetBagCount(itemId, count);
             Debug.Log($"[InventoryOdinTester] Manager 设置 Bag 数量 itemId={itemId}, count={count}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 移动 Bar 内部槽位。
+        /// </summary>
+        [Button("Manager 移动 Bar 槽位")]
+        public void MoveBarSlotByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.MoveBarSlot(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 移动 Bar 槽位 from={fromIndex}, to={toIndex}, success={success}");
             PrintManagerSlots();
         }
 
@@ -92,10 +97,7 @@ namespace Inventory
         public void MoveBagSlotByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.MoveBagSlot(fromIndex, toIndex);
             Debug.Log($"[InventoryOdinTester] Manager 移动 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
@@ -109,10 +111,7 @@ namespace Inventory
         public void MergeBagSlotsByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.MergeBagSlots(fromIndex, toIndex);
             Debug.Log($"[InventoryOdinTester] Manager 合并 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
@@ -126,13 +125,96 @@ namespace Inventory
         public void SplitBagSlotByManager()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             bool success = manager.SplitBagSlot(fromIndex, count, toIndex);
             Debug.Log($"[InventoryOdinTester] Manager 拆分 Bag 槽位 from={fromIndex}, to={toIndex}, count={count}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 将 Bar 槽位移动到 Bag 槽位。
+        /// </summary>
+        [Button("Manager Bar 移动到 Bag")]
+        public void MoveBarToBagByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.MoveBarToBag(barIndex, bagIndex);
+            Debug.Log($"[InventoryOdinTester] Manager Bar 移动到 Bag barIndex={barIndex}, bagIndex={bagIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 将 Bag 槽位移动到 Bar 槽位。
+        /// </summary>
+        [Button("Manager Bag 移动到 Bar")]
+        public void MoveBagToBarByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.MoveBagToBar(bagIndex, barIndex);
+            Debug.Log($"[InventoryOdinTester] Manager Bag 移动到 Bar bagIndex={bagIndex}, barIndex={barIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 运行时扩展 Bag 已解锁容量。
+        /// </summary>
+        [Button("Manager 扩容 Bag")]
+        public void ExpandBagCapacityByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            int beforeBagCapacity = manager.BagCapacity;
+            int beforeSlotCount = manager.GetBagSlots().Count;
+            bool success = manager.ExpandBagCapacity(expandSlotCount);
+            Debug.Log($"[InventoryOdinTester] Manager 扩容 Bag additional={expandSlotCount}, success={success}, beforeCapacity={beforeBagCapacity}, afterCapacity={manager.BagCapacity}, beforeSlots={beforeSlotCount}, afterSlots={manager.GetBagSlots().Count}, maxCapacity={manager.Capacity}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 检查 Bag 扩容结果是否符合当前 Manager 容量语义。
+        /// </summary>
+        [Button("测试 Bag 扩容结果")]
+        public void CheckBagCapacityResult()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool capacityValid = manager.BagCapacity <= manager.Capacity;
+            bool slotCountMatched = manager.GetBagSlots().Count == manager.BagCapacity;
+            Debug.Log($"[InventoryOdinTester] 测试 Bag 扩容结果 capacityValid={capacityValid}, slotCountMatched={slotCountMatched}, bagCapacity={manager.BagCapacity}, maxCapacity={manager.Capacity}, slotCount={manager.GetBagSlots().Count}");
+        }
+
+        /// <summary>
+        /// 将 Bar 指定槽位整格丢弃到世界事件路径。
+        /// </summary>
+        [Button("Manager 丢弃 Bar 槽位")]
+        public void DropBarSlotByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.DropBarSlotToWorld(barIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 丢弃 Bar 槽位 barIndex={barIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 将 Bag 指定槽位整格丢弃到世界事件路径。
+        /// </summary>
+        [Button("Manager 丢弃 Bag 槽位")]
+        public void DropBagSlotByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.DropBagSlotToWorld(bagIndex);
+            Debug.Log($"[InventoryOdinTester] Manager 丢弃 Bag 槽位 bagIndex={bagIndex}, success={success}");
             PrintManagerSlots();
         }
 
@@ -143,10 +225,7 @@ namespace Inventory
         public void PrintManagerSlots()
         {
             InventoryManager manager = GetManager();
-            if (manager == null)
-            {
-                return;
-            }
+            if (manager == null) return;
 
             StringBuilder builder = new StringBuilder();
             builder.AppendLine($"[InventoryOdinTester] Capacity Bag={manager.BagCapacity}, Max={manager.Capacity}, Bar={manager.BarCapacity}");
@@ -160,15 +239,13 @@ namespace Inventory
         private void OnValidate()
         {
             count = Mathf.Max(1, count);
+            expandSlotCount = Mathf.Max(1, expandSlotCount);
         }
 
         private static InventoryManager GetManager()
         {
             InventoryManager manager = InventoryManager.Instance;
-            if (manager == null)
-            {
-                Debug.LogError("[InventoryOdinTester] 场景中不存在 InventoryManager。");
-            }
+            if (manager == null) Debug.LogError("[InventoryOdinTester] 场景中不存在 InventoryManager。");
 
             return manager;
         }

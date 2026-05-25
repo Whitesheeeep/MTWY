@@ -10,11 +10,13 @@ using UnityEngine;
 
 namespace WS_Modules.UIModule
 {
-    public class GeneratorBindItemsComponentTool : Editor
+    public class GeneratorBindItemsComponentTool : UnityEditor.Editor
     {
         public static List<EditorObjectData> objDataList; //查找对象的数据
         static readonly Dictionary<string, string> _mMethodDic = new Dictionary<string, string>();
         private static WSFrameSetting _frameSetting;
+        private const string ItemGeneratorClassPathKey = "itemGeneratorClassPath";
+        private const string ItemGeneratorTargetIdKey = "itemGeneratorTargetInstanceId";
         
         private static WSFrameSetting GetSetting()
         {
@@ -58,12 +60,20 @@ namespace WS_Modules.UIModule
             //生成CS脚本
             string scriptContent = GenerateScripts(scriptName);
             string scriptFilePath = $"{_frameSetting.uiManagerSetting.ItemScriptsGeneratorPath}/{scriptName}.cs";
+            int targetInstanceId = obj.GetInstanceID();
 
             Debug.Log("Script Content:\n" + scriptContent);
 
-            ScriptDisplayWindow.ShowWindow(scriptContent, scriptFilePath, _mMethodDic, objDataList);
-
-            EditorPrefs.SetString("itemGeneratorClassPath", scriptFilePath);
+            ScriptDisplayWindow.ShowWindow(
+                scriptContent,
+                scriptFilePath,
+                _mMethodDic,
+                objDataList,
+                onBeforeGenerate: () =>
+                {
+                    EditorPrefs.SetString(ItemGeneratorClassPathKey, scriptFilePath);
+                    EditorPrefs.SetInt(ItemGeneratorTargetIdKey, targetInstanceId);
+                });
         }
 
         public static string GenerateScripts(string name)
@@ -230,8 +240,13 @@ namespace WS_Modules.UIModule
         public static void AddComponentToItem()
         {
             //如果当前不是生成数据脚本的回调，就不处理
-            string scriptPath = EditorPrefs.GetString("itemGeneratorClassPath")
-                .Replace(Application.dataPath, "Assets/");
+            string rawScriptPath = EditorPrefs.GetString(ItemGeneratorClassPathKey);
+            if (string.IsNullOrEmpty(rawScriptPath))
+            {
+                return;
+            }
+
+            string scriptPath = rawScriptPath.Replace(Application.dataPath, "Assets/");
             if (string.IsNullOrEmpty(scriptPath))
             {
                 return;
@@ -243,13 +258,20 @@ namespace WS_Modules.UIModule
             if (targetScript == null)
             {
                 Debug.Log($"Failed to load script! Path:{scriptPath}");
+                ClearPendingItemGeneration();
                 return;
             }
 
-            //获取要挂载的那个物体
-            GameObject selectedObject = Selection.activeGameObject;
+            int targetId = EditorPrefs.GetInt(ItemGeneratorTargetIdKey, 0);
+            GameObject selectedObject = targetId != 0
+                ? EditorUtility.InstanceIDToObject(targetId) as GameObject
+                : null;
             if (selectedObject == null)
+            {
+                Debug.LogWarning("Item 生成回调未找到目标对象，已跳过自动挂载。");
+                ClearPendingItemGeneration();
                 return;
+            }
 
             //先获取现窗口上有没有挂载该数据组件，如果没挂载在进行挂载
             Component compt = selectedObject.GetComponent(targetScript);
@@ -336,8 +358,7 @@ namespace WS_Modules.UIModule
                 }
             }
 
-            EditorPrefs.DeleteKey("itemGeneratorClassPath");
-            PlayerPrefs.DeleteKey(GeneratorConfig.OBJDATALIST_KEY);
+            ClearPendingItemGeneration();
             //自动保存预制体
             if (AnalysisComponentDataTool.IsPrefabInstance(selectedObject))
             {
@@ -346,6 +367,13 @@ namespace WS_Modules.UIModule
 
             UnityEditor.EditorUtility.SetDirty(compt); // 标记对象为“脏”以刷新
             UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(compt);
+        }
+
+        private static void ClearPendingItemGeneration()
+        {
+            EditorPrefs.DeleteKey(ItemGeneratorClassPathKey);
+            EditorPrefs.DeleteKey(ItemGeneratorTargetIdKey);
+            PlayerPrefs.DeleteKey(GeneratorConfig.OBJDATALIST_KEY);
         }
     }
 }

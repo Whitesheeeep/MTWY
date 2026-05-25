@@ -43,10 +43,7 @@ namespace Inventory
 
             for (int i = 0; i < slots.Count; i++)
             {
-                if (slots[i] == null)
-                {
-                    slots[i] = new InventorySlotData();
-                }
+                slots[i] ??= new InventorySlotData();
 
                 if (slots[i].IsEmpty)
                 {
@@ -150,6 +147,29 @@ namespace Inventory
                 AddChangedIndex(changedIndices, i);
             }
 
+            return true;
+        }
+
+        /// <summary>
+        /// 从指定槽位移除指定数量的物品，并记录受影响的槽位索引。
+        /// </summary>
+        /// <param name="index">槽位索引。</param>
+        /// <param name="count">需要移除的数量。</param>
+        /// <param name="changedIndices">受影响的槽位索引集合。</param>
+        /// <returns>移除成功返回 true，索引无效或槽位为空返回 false。</returns>
+        public bool RemoveFromSlot(int index, int count, ICollection<int> changedIndices)
+        {
+            ValidatePositiveCount(count);
+
+            if (!IsValidIndex(index)) return false;
+
+            InventorySlotData slot = slots[index];
+            if (slot.IsEmpty) return false;
+
+            slot.count -= Math.Min(slot.count, count);
+            if (slot.count <= 0) slot.Clear();
+
+            AddChangedIndex(changedIndices, index);
             return true;
         }
 

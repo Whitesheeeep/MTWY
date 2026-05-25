@@ -31,10 +31,6 @@ namespace WS_Modules.Pooling
         }
     }
 
-    /// <summary>
-    /// 用于 class 预热配置类
-    /// 给 PoolPrewarmConfig 提供下拉选项和预热逻辑
-    /// </summary>
     public static class ClassPoolPrewarmRegistry
     {
         private static readonly ClassPoolPrewarmRegistryEntry[] EntriesValue =

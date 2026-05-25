@@ -46,5 +46,6 @@ MonoBehaviour:
     - UnityEngine
     - UnityEngine.UI
     - TMPro
+    - Inventory
   poolingSetting:
     GlobalPrewarmConfig: {fileID: 11400000, guid: a1d1b28afc416a5428c456ba2adeb143, type: 2}

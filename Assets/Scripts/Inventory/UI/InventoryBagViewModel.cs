@@ -16,25 +16,24 @@ namespace WS_Modules.UIModule
         private readonly List<IUnRegister> unRegisterList = new List<IUnRegister>();
         private int selectedSlotIndex = -1;
 
-        /// <summary>
-        /// 单个槽位显示数据变化时触发。
-        /// </summary>
         public event Action<int> SlotChanged;
-
-        /// <summary>
-        /// 槽位列表需要整体刷新时触发。
-        /// </summary>
         public event Action SlotsChanged;
-
-        /// <summary>
-        /// 选中槽位变化时触发。
-        /// </summary>
         public event Action SelectionChanged;
 
         /// <summary>
         /// 当前 Bag 槽位显示数据。
         /// </summary>
         public IReadOnlyList<InventorySlotViewData> Slots => slots;
+
+        /// <summary>
+        /// Bag 最大槽位容量。
+        /// </summary>
+        public int SlotCapacity => manager.Capacity;
+
+        /// <summary>
+        /// Bag 当前已解锁槽位数量。
+        /// </summary>
+        public int UnlockedSlotCount => manager.BagCapacity;
 
         /// <summary>
         /// 当前选中的 Bag 槽位索引。
@@ -58,17 +57,15 @@ namespace WS_Modules.UIModule
             RefreshSlotsFromModel();
         }
 
+        #region Model
         /// <summary>
         /// 从数据层刷新指定槽位显示数据。
         /// </summary>
         /// <param name="index">槽位索引。</param>
-        public void RefreshSlotFromModel(int index)
+        private void RefreshSlotFromModel(int index)
         {
             EnsureSlotListSize();
-            if (index < 0 || index >= slots.Count)
-            {
-                return;
-            }
+            if (index < 0 || index >= slots.Count) return;
 
             InventorySlotData slot = manager.GetBagSlot(index);
             slots[index] = CreateViewData(index, slot);
@@ -78,7 +75,7 @@ namespace WS_Modules.UIModule
         /// <summary>
         /// 从数据层刷新全部 Bag 槽位显示数据。
         /// </summary>
-        public void RefreshSlotsFromModel()
+        private void RefreshSlotsFromModel()
         {
             slots.Clear();
             IReadOnlyList<InventorySlotData> modelSlots = manager.GetBagSlots();
@@ -89,7 +86,9 @@ namespace WS_Modules.UIModule
 
             SlotsChanged?.Invoke();
         }
+        #endregion
 
+        #region View
         /// <summary>
         /// 选择 Bag 槽位。
         /// </summary>
@@ -130,12 +129,23 @@ namespace WS_Modules.UIModule
         }
 
         /// <summary>
+        /// 将 Bag 指定槽位整格丢弃到世界中。
+        /// </summary>
+        public bool DropSlotToWorld(int index)
+        {
+            return manager.DropBagSlotToWorld(index);
+        }
+        #endregion
+
+        #region LifeCycle
+        /// <summary>
         /// 释放事件订阅。
         /// </summary>
         public void Dispose()
         {
             this.UnRegisterAll();
         }
+        #endregion
 
         private void OnModelSlotChanged(InventorySlotChangedEventArgs eventArgs)
         {
@@ -158,7 +168,10 @@ namespace WS_Modules.UIModule
 
         private InventorySlotViewData CreateViewData(int index, InventorySlotData slot)
         {
-            return InventorySlotViewDataMapper.Create(index, slot.itemId, slot.count, GetItemData);
+            if (slot.IsEmpty) return InventorySlotViewData.Empty(index);
+
+            ItemData itemData = GetItemData(slot.itemId);
+            return new InventorySlotViewData(index, slot.itemId, slot.count, itemData?.icon);
         }
 
         private ItemData GetItemData(int itemId)

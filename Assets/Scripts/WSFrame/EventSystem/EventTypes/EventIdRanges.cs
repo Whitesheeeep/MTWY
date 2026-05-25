@@ -7,5 +7,8 @@ namespace WS_Modules.CustomEventSystem
 
         InputStart = TestEnd,
         InputEnd = InputStart + 100,
+
+        InventoryStart = InputEnd,
+        InventoryEnd = InventoryStart + 100,
     }
 }
