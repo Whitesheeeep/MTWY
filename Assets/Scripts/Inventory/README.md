@@ -1,265 +1,126 @@
-# Inventory 背包模块结构
+# Inventory 模块说明
 
-## 目录职责
+## 模块目标
 
-```text
-Assets/Scripts/Inventory
-├── Core
-│   ├── InventoryManager.cs
-│   ├── InventoryData.cs
-│   ├── InventorySlotData.cs
-│   ├── InventoryScheduler.cs
-│   └── InventoryChangeSet.cs
-├── Runtime
-│   └── ItemPickupCollector2D.cs
-├── UI
-│   ├── InventoryBarView.cs
-│   ├── InventoryBagView.cs
-│   ├── InventoryBarViewModel.cs
-│   ├── InventoryBagViewModel.cs
-│   └── InventorySlotViewData.cs
-└── Test
-    └── InventoryOdinTester.cs
-```
+Inventory 模块负责玩家快捷栏、背包以及后续宝箱等槽位容器的数据管理、UI 显示和拖拽交互。
 
-## Core
+当前核心方向：
+- Bar 和 Bag 数据分离。
+- Bar 是固定槽位快捷栏。
+- Bag 是可扩容、可虚拟滚动的槽位容器。
+- ViewModel 负责 UI 意图、选择状态和显示数据。
+- View/Layout 负责视觉刷新、槽位复用、DropPreview 和滚动表现。
+- 跨系统的世界掉落通过全局 EventSystem 通知。
 
-```mermaid
-sequenceDiagram
-    participant Item as 世界 Item
-    participant Collector as ItemPickupCollector2D
-    participant Manager as InventoryManager
-    participant VM as BarVM / BagVM
-    participant View as BarView / BagView
+## Core 数据层
 
-    Item->>Collector: Trigger / Collision
-    Collector->>Manager: AddItem(itemId, item.Count)
-    Manager->>Manager: Bar 优先，剩余进入 Bag
-    Manager-->>VM: BarSlotChanged / BagSlotChanged
-    VM-->>View: SlotChanged
-    View->>View: RefreshSlot
-    Collector->>Item: 全部拾取则 Destroy，部分拾取则 SetCount(remaining)
-```
-
-`Core` 存放背包的数据核心与调度核心，不直接处理具体 UI 表现。
-
-- `InventoryManager`：背包对外入口，统一管理 Bar 和 Bag 数据。
-- `InventoryData`：单个槽位集合的数据容器，负责堆叠、移除、拆分、合并、快照和容量整理。
+- `InventoryManager`：玩家 Inventory 数据入口，负责 Bar/Bag 容器生命周期、拾取分配、容量扩展等对外操作。
+- `InventoryDataContainer`：普通槽位数据容器，承载 `InventoryData` 和容量。
+- `ExpandableInventoryDataContainer`：可扩容槽位容器，用于 Bag。
+- `InventoryData`：槽位集合数据，只保存和处理槽位内容。
 - `InventorySlotData`：单个槽位数据，只保存 `itemId` 和 `count`。
-- `InventoryScheduler`：协调 Bar 与 Bag 之间的移动、拆分、合并和拾取分配。
-- `InventoryChangeSet`：记录本次操作影响到的 Bar/Bag 槽位索引，用于局部刷新。
-- `InventoryEventType` / `InventoryEventArgs`：InventoryManager 内部事件模块使用的事件类型和事件参数。
 
-## Runtime
+## ViewModel 层
 
-`Runtime` 存放场景运行时行为脚本。
+- `InventorySlotContainerViewModel` 是通用槽位容器 ViewModel 基类。
+- `InventoryBarViewModel` 继承通用 ViewModel，只保留 Bar 特有意图。
+- `InventoryBagViewModel` 继承通用 ViewModel，只保留 Bag 特有容量语义。
 
-- `ItemPickupCollector2D`：碰撞到物品后，将物品提交给 `InventoryManager`。
+ViewModel 负责：
+- 维护 `SelectedIndex`。
+- 提供 `InventorySlotViewData`。
+- 接收 View 的用户意图。
+- 调用数据层完成移动、合并、交换、丢弃。
+- 把数据变化转换成 View 可消费的刷新事件。
 
-## UI / MVVM
+## View 与 Layout
 
-UI 层采用 MVVM 思路：
+- `InventorySlotContainerViewBase<TViewModel>`：通用槽位容器 View 基类，负责绑定 ViewModel、订阅刷新事件、处理槽位点击和拖拽输入转发。
+- `InventorySlotView`：最小槽位显示单元，只负责图标、数量、选中态、DropPreview 和 Unity 指针事件上报。
+- `InventoryFixedSlotViewLayout`：固定槽位布局，用于 Bar，只负责生成/销毁槽位和按顺序刷新；排列交给 Unity Layout 组件。
+- `InventoryVirtualizedSlotViewLayout`：虚拟滚动布局，用于 Bag，通过可见索引范围和字典管理当前显示槽位。
+- `DropPreview` 只属于 View/Layout/SlotView，不进入 ViewModel。
 
-```text
-View 输入
--> ViewModel 用户意图方法
--> InventoryManager 数据操作
--> InventoryChangeSet / Changed 事件
--> ViewModel 刷新 ViewData
--> View 刷新显示
-```
+## 拖拽职责
 
-- View 只处理前端控件、点击转发和视觉刷新。
-- ViewModel 持有 UI 状态和显示数据，不直接持久化背包数据。
-- Core 层只关心数据和业务规则，不依赖具体窗口或 prefab。
+- `InventorySlotViewEventModule` 是单个槽位容器 View 内部的局部输入事件模块。
+- `InventorySlotDragCoordinator` 只负责单次拖拽会话、跨 ViewModel 数据移动和拖出 UI 丢弃。
+- Coordinator 不长期注册、不缓存、不拥有 ViewModel；只在当前拖拽会话中临时保存来源 ViewModel，拖拽结束立即清空。
+- Coordinator 不处理 `ScrollRect`、Layout、边缘滚动或 DropPreview。
+- Bag 边缘滚动由 `InventoryBagView` 和 `InventoryDragEdgeScrollController` 处理。
+- 拖拽跟随鼠标的视觉表现由 Coordinator 注册到 `PublicMono.Update` 后驱动 `DropWindow`。
 
-## 拖拽与滚动输入规则
+## 拖拽事件时序
 
-- `InventorySlotView` 的拖拽只表示物品移动，不负责驱动 `ScrollRect` 滚动。
-- 空槽拖拽不进入物品拖拽状态，也不触发 `DropWindow`。
-- Bag 内容滚动由鼠标滚轮和透明 Vertical Scrollbar 负责。
-- 透明滚动条应保持 `Image` 启用并保留 `raycastTarget`，只把颜色 alpha 设为 0，避免失去鼠标拖拽能力。
-- 拖到边缘自然滚动由 `InventoryDragEdgeScrollController` 处理，并由 `InventoryBagView` 持有和调用，不放在单个 SlotView 中。
-- 边缘滚动使用真实 UI RectTransform 区域判定：`EdgeScrollTopArea`、`EdgeScrollDeadZoneArea`、`EdgeScrollBottomArea`。
-- 三个区域的 `Image` 用不同颜色显示，但 `raycastTarget` 必须关闭，避免影响槽位 hover、drop 和 click。
-
-## 容量规则
-
-- `BagCapacity` 表示 Bag 当前已解锁槽位数量。
-- `Capacity` 表示 Bag 最大容量上限。
-- `ExpandBagCapacity(additionalSlotCount)` 只增加当前已解锁容量，不会超过 `Capacity`。
-- 扩容只在当前 `bagData` 实例上追加空槽位，不替换 `bagData`，因此不需要重建 `InventoryScheduler`。
-- Bar 当前保持固定容量，由 `BarCapacity` 表示。
-
-## 拾取规则
-
-普通拾取物品时：
-
-```text
-AddItem
--> 先进入 Bar
--> Bar 同类堆叠满或 Bar 无空槽
--> 剩余进入 Bag
--> 返回最终未能放入的剩余数量
-```
-
-## 变更通知规则
-
-- `InventoryManager` 自己持有模块内部 `EventCenterModule<int>`，不把槽位刷新事件发布到全局 EventSystem。
-- 单个槽位变化时通过 `RegisterBarSlotChanged` 或 `RegisterBagSlotChanged` 订阅。
-- 容量变化、加载数据、清空数据等结构性变化通过 `RegisterBarSlotsChanged` 或 `RegisterBagSlotsChanged` 订阅。
-- 数据层操作应尽量通过 `InventoryChangeSet` 收集变化索引，避免 UI 每次全量刷新。
-- ViewModel 到 View 的刷新事件仍保留本地 C# event，用于对象内部 UI 绑定。
-
-## 辅助图
-
-结构图见同目录下的 `inventory-architecture.html`。
-
-## 系统交互图
-
-### 总体数据流
-
-```mermaid
-flowchart LR
-    subgraph UI["UI 层"]
-        SlotView["InventorySlotView"]
-        BarView["InventoryBarView"]
-        BagView["InventoryBagView"]
-        DropWindow["DropWindow"]
-    end
-
-    subgraph VM["ViewModel 层"]
-        BarVM["InventoryBarViewModel"]
-        BagVM["InventoryBagViewModel"]
-    end
-
-    subgraph Core["Inventory 数据层"]
-        Manager["InventoryManager"]
-        Scheduler["InventoryScheduler"]
-        BarData["Bar InventoryData"]
-        BagData["Bag InventoryData"]
-        InventoryEvents["Inventory 内部 EventModule"]
-    end
-
-    subgraph GlobalEvent["全局 EventSystem"]
-        DropEvent["DropWorldItemRequested"]
-    end
-
-    subgraph World["世界层"]
-        DropSpawner["InventoryWorldDropSpawner2D"]
-        WorldItem["Item"]
-        PickupCollector["ItemPickupCollector2D"]
-    end
-
-    SlotView --> BarView
-    SlotView --> BagView
-    BarView --> BarVM
-    BagView --> BagVM
-    BarVM --> Manager
-    BagVM --> Manager
-    Manager --> Scheduler
-    Scheduler --> BarData
-    Scheduler --> BagData
-    Manager --> InventoryEvents
-    InventoryEvents --> BarVM
-    InventoryEvents --> BagVM
-    BarVM --> BarView
-    BagVM --> BagView
-
-    BarView -.拖拽显示.-> DropWindow
-    BagView -.拖拽显示.-> DropWindow
-    Manager --> DropEvent
-    DropEvent --> DropSpawner
-    DropSpawner --> WorldItem
-    WorldItem --> PickupCollector
-    PickupCollector --> Manager
-```
-
-### Bar 与 Bag 拖拽交换
+### 成功释放到槽位
 
 ```mermaid
 sequenceDiagram
     participant Slot as InventorySlotView
-    participant Window as GlobalUIWindow / BagWindow
-    participant Drop as DropWindow
-    participant VM as BarVM / BagVM
-    participant Manager as InventoryManager
-    participant Scheduler as InventoryScheduler
-    participant Event as Inventory EventModule
-    participant View as BarView / BagView
+    participant View as SlotContainerViewBase
+    participant Layout as SlotViewLayout
+    participant Coordinator as DragCoordinator
+    participant SourceVM as Source ViewModel
+    participant TargetVM as Target ViewModel
+    participant Service as TransferService
 
-    Slot->>Window: BeginDrag(area, index, position)
-    Window->>Drop: Open / MoveToScreenPosition
-    Slot->>Window: Drag(position)
-    Window->>Drop: MoveToScreenPosition
-    Slot->>Window: PointerEnter(targetArea, targetIndex)
-    Window->>View: RefreshDropPreview(targetIndex, true)
-    Slot->>Window: Drop(fromArea, fromIndex, toArea, toIndex)
-    Window->>VM: MoveToBar / MoveToBag / MoveInSameArea
-    VM->>Manager: 请求移动或交换槽位
-    Manager->>Scheduler: 执行 Bar/Bag 数据调度
-    Scheduler-->>Manager: InventoryChangeSet
-    Manager->>Event: 触发单槽位变更
-    Event-->>VM: SlotChanged(index)
-    VM-->>View: 刷新指定槽位
-    Window->>Drop: HideDropItem
+    Slot->>View: DragStarted(sourceIndex)
+    View->>Coordinator: HandleDragStarted(sourceVM, sourceIndex)
+    Coordinator->>SourceVM: SelectSlot(sourceIndex)
+    Coordinator->>Coordinator: UpdateDragSession()
+    Slot->>View: DragEntered(targetIndex)
+    View->>Layout: RefreshDropPreview(targetIndex, canDrop)
+    Slot->>View: Dropped(targetIndex)
+    View->>Layout: ClearDropPreview
+    View->>Coordinator: HandleDropped(targetVM, targetIndex)
+    Coordinator->>SourceVM: MoveSlot / MoveSlotTo
+    SourceVM->>Service: 移动、合并或交换
 ```
 
-### 拖出 UI 丢弃到世界
+### 拖出 UI 丢弃
 
 ```mermaid
 sequenceDiagram
     participant Slot as InventorySlotView
-    participant Window as GlobalUIWindow / BagWindow
-    participant Drop as DropWindow
-    participant VM as BarVM / BagVM
-    participant Manager as InventoryManager
-    participant GlobalEvent as 全局 EventSystem
+    participant View as SlotContainerViewBase
+    participant Coordinator as DragCoordinator
+    participant VM as SlotContainerViewModel
+    participant DropService as WorldDropService
+    participant GlobalEvent as Global EventSystem
     participant Spawner as InventoryWorldDropSpawner2D
-    participant Item as 世界 Item
 
-    Slot->>Window: EndDrag(pointer 未落在可接收槽位)
-    Window->>Drop: HideDropItem
-    Window->>VM: DropSlotToWorld(area, index)
-    VM->>Manager: DropBarSlotToWorld / DropBagSlotToWorld
-    Manager->>Manager: 校验槽位、物品配置、canDropped
-    Manager->>Manager: 清空原槽并记录 changed index
-    Manager->>GlobalEvent: DropWorldItemRequested(itemId, count)
-    GlobalEvent-->>Spawner: 接收世界掉落请求
-    Spawner->>Spawner: 计算 origin / direction / distance
-    Spawner->>Item: Instantiate 并 Initialize(itemId, count)
+    Slot->>View: DragStarted(sourceIndex)
+    View->>Coordinator: HandleDragStarted(sourceVM, sourceIndex)
+    Slot->>View: DragEnded(sourceIndex)
+    View->>Coordinator: HandleDragEnded(sourceVM, sourceIndex)
+    Coordinator->>VM: DropSlotToWorld(sourceIndex)
+    VM->>DropService: DropSlotToWorld(container, database, index)
+    DropService->>GlobalEvent: DropWorldItemRequested(itemId, count)
+    GlobalEvent-->>Spawner: 生成世界 Item
 ```
 
-### 世界物品拾取回流
+## 世界掉落流程
 
-```mermaid
-sequenceDiagram
-    participant Item as 世界 Item
-    participant Collector as ItemPickupCollector2D
-    participant Manager as InventoryManager
-    participant Scheduler as InventoryScheduler
-    participant Event as Inventory EventModule
-    participant VM as BarVM / BagVM
-    participant View as BarView / BagView
+- UI 拖出槽位后，不直接生成世界物体。
+- ViewModel 调用 `InventorySlotWorldDropService`。
+- Service 校验槽位、物品配置和 `canDropped`。
+- Service 扣除整格数据。
+- Service 通过全局 EventSystem 发送 `DropWorldItemRequested`。
+- `InventoryWorldDropSpawner2D` 监听事件并生成一个世界 `Item`。
+- 世界 `Item` 保存数量，但不显示数字。
 
-    Item->>Collector: Trigger / Collision
-    Collector->>Manager: AddItem(itemId, item.Count)
-    Manager->>Scheduler: 优先 Bar，剩余进入 Bag
-    Scheduler-->>Manager: 剩余数量与 changed indices
-    Manager->>Event: BarSlotChanged / BagSlotChanged
-    Event-->>VM: SlotChanged(index)
-    VM-->>View: RefreshSlot(index)
-    alt 全部放入背包
-        Collector->>Item: Destroy
-    else 只能放入部分
-        Collector->>Item: SetCount(remaining)
-    end
-```
+## 滚动输入规则
 
-### 职责边界
+- `InventorySlotView` 的拖拽只表示物品移动，不驱动 `ScrollRect`。
+- 空槽拖拽不会进入物品拖拽状态，也不会打开 `DropWindow`。
+- Bag 的普通滚动由鼠标滚轮和 Scrollbar 负责。
+- Bag 的边缘自动滚动由 `InventoryDragEdgeScrollController` 处理。
+- 边缘滚动判定使用真实 UI 区域，判定区域不启用 `raycastTarget`，避免影响槽位 hover、drop 和 click。
 
-- `InventorySlotView` 只处理槽位显示、点击和拖拽输入，不直接修改背包数据。
-- `InventoryBarView` / `InventoryBagView` 负责 UI 容器、拖拽表现和槽位刷新。
-- `InventoryBarViewModel` / `InventoryBagViewModel` 负责把 UI 意图转为数据层调用，并把数据变更转成 ViewData。
-- `InventoryManager` 是背包数据入口，负责校验规则、触发内部刷新事件，以及向全局事件系统发出跨系统请求。
-- `InventoryWorldDropSpawner2D` 只响应全局掉落事件，负责在世界中生成 `Item`。
+## 职责边界
+
+- `InventorySlotView` 不直接修改背包数据，也不直接引用 ViewModel。
+- `InventorySlotContainerViewBase` 持有并绑定 ViewModel，是 Slot 输入转 ViewModel/Coordinator 的桥接层。
+- `InventoryVirtualizedSlotViewLayout` 不持有 ViewModel，只消费 ViewData。
+- `InventorySlotDragCoordinator` 不关心 UI 布局和滚动。
+- `InventoryManager` 不关心具体 UI 窗口和拖拽表现。

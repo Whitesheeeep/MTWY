@@ -76,7 +76,7 @@
 }
 
 .ui-runtime-table {
-    min-width: 860px;
+    min-width: 1000px;
     border-top-width: 1px;
     border-top-color: rgb(72, 72, 72);
     border-left-width: 1px;
@@ -154,6 +154,24 @@
 
 .col-has-game-object {
     width: 110px;
+}
+
+.col-actions {
+    width: 140px;
+}
+
+.ui-runtime-actions {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ui-runtime-action-button {
+    min-width: 56px;
+    height: 20px;
+    margin-right: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    font-size: 11px;
 }
 
 .ui-state-badge {

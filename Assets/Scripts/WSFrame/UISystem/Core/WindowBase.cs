@@ -96,6 +96,12 @@ namespace WS_Modules.UIModule
         }
 
         #region 动画管理
+        /// <summary>
+        /// 如果不需要动画请设置 doAnimation 为 false 来禁用动画，适用于一些特殊场景，比如：循环弹出时，第一次弹出需要动画，后续的弹出就不需要动画了
+        /// </summary>
+        /// <param name="doAnimation"></param>
+        protected virtual void SetDoAnimation(bool doAnimation) => _disableAnim = !doAnimation;
+
         public void ShowAnimation()
         {
             //基础弹窗不需要动画

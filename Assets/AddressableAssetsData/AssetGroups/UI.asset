@@ -17,18 +17,23 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 48d36db7b2acb2d4d8004cecdcdf26b4
   m_SerializeEntries:
+  - m_GUID: 3ddcc7a4591f7a7448db2e15150ec6cf
+    m_Address: BagWindow
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5545fc195611f7345b770fd9d94f00d9
+    m_Address: ItemTipWindow
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 721ff30fcef5aa94c95d580da713cc12
     m_Address: GlobalUIWindow
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8037a7a5d91e4c54b9ecd55ca23781b9
+  - m_GUID: 8fd87324cd0633044a8da293b4b4bb30
     m_Address: DropWindow
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: eff2aefbacaefe04ba63f4a56b5de20b
-    m_Address: BagWindow
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

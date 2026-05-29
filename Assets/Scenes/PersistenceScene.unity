@@ -290,37 +290,6 @@ MonoBehaviour:
     dropOrigin: {fileID: 139756981}
     dropDirection: {x: 0, y: -1}
     dropDistance: 5
---- !u!1 &143960992
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 143960993}
-  m_Layer: 0
-  m_Name: PoolSystemRoot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &143960993
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 143960992}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 699567828}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &244095419
 GameObject:
   m_ObjectHideFlags: 0
@@ -639,11 +608,6 @@ MonoBehaviour:
   barIndex: 0
   bagIndex: 0
   expandSlotCount: 5
---- !u!4 &699567828 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1526171592716235483, guid: f357673d5e17f384fa3c49ff17c7e384, type: 3}
-  m_PrefabInstance: {fileID: 1374367062}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -1280,13 +1244,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 1526171592716235483, guid: f357673d5e17f384fa3c49ff17c7e384, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1557532175}
-    - targetCorrespondingSourceObject: {fileID: 1526171592716235483, guid: f357673d5e17f384fa3c49ff17c7e384, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 143960993}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f357673d5e17f384fa3c49ff17c7e384, type: 3}
 --- !u!1 &1414901066
@@ -1434,37 +1392,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8dedcd1e5691a9843961a89f7683e315, type: 3}
---- !u!1 &1557532174
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1557532175}
-  m_Layer: 0
-  m_Name: PoolSystemRoot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1557532175
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1557532174}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 699567828}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2013315950
 GameObject:
   m_ObjectHideFlags: 0
@@ -1700,134 +1627,195 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abc67d6764c42034aa0d22a54a83e5da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  barCapacity: 10
-  bagCapacity: 50
-  capacity: 100
-  maxStackCount: 99
-  barData:
-    slots:
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-  bagData:
-    slots:
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
-    - itemId: 0
-      count: 0
+  barContainer:
+    capacity: 10
+    data:
+      slots:
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+  bagContainer:
+    capacity: 80
+    data:
+      slots:
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+      - itemId: 0
+        count: 0
+    maxCapacity: 100
 --- !u!4 &2065780190
 Transform:
   m_ObjectHideFlags: 0

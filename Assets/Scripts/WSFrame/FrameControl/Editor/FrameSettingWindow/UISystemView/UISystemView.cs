@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 using WS_Modules.UIModule;
 
@@ -158,7 +161,7 @@ namespace WS_Modules
             SetTableVisible(true);
             foreach (UIWindowSnapshot snapshot in snapshots)
             {
-                runtimeTableBody.Add(CreateSnapshotTableRow(snapshot, topWindowName));
+                runtimeTableBody.Add(CreateSnapshotTableRow(snapshot, topWindowName, RefreshRuntimeWindowInfo));
             }
         }
 
@@ -180,7 +183,10 @@ namespace WS_Modules
             runtimeTable.EnableInClassList(HiddenClassName, !visible);
         }
 
-        private static VisualElement CreateSnapshotTableRow(UIWindowSnapshot snapshot, string topWindowName)
+        private static VisualElement CreateSnapshotTableRow(
+            UIWindowSnapshot snapshot,
+            string topWindowName,
+            Action refreshCallback)
         {
             var row = new VisualElement();
             row.AddToClassList("ui-runtime-row");
@@ -196,7 +202,110 @@ namespace WS_Modules
             row.Add(CreateTableCell(snapshot.FullScreenWindow.ToString(), "col-full-screen", GetBooleanClassName(snapshot.FullScreenWindow)));
             row.Add(CreateTableCell(snapshot.HasMask.ToString(), "col-has-mask", GetBooleanClassName(snapshot.HasMask)));
             row.Add(CreateTableCell(snapshot.HasGameObject.ToString(), "col-has-game-object", GetBooleanClassName(snapshot.HasGameObject)));
+            row.Add(CreateActionCell(snapshot, refreshCallback));
             return row;
+        }
+
+        private static VisualElement CreateActionCell(UIWindowSnapshot snapshot, Action refreshCallback)
+        {
+            var cell = new VisualElement();
+            cell.AddToClassList("ui-runtime-cell");
+            cell.AddToClassList("col-actions");
+            cell.AddToClassList("ui-runtime-actions");
+
+            var popUpButton = new Button(() =>
+            {
+                PopUpWindow(snapshot.WindowName);
+                RefreshAfterRuntimeAction(refreshCallback);
+            })
+            {
+                text = "PopUp"
+            };
+            popUpButton.AddToClassList("ui-runtime-action-button");
+
+            var hideButton = new Button(() =>
+            {
+                UIManager.Instance.HideWindow(snapshot.WindowName);
+                RefreshAfterRuntimeAction(refreshCallback);
+            })
+            {
+                text = "Hide"
+            };
+            hideButton.AddToClassList("ui-runtime-action-button");
+
+            cell.Add(popUpButton);
+            cell.Add(hideButton);
+            return cell;
+        }
+
+        private static void RefreshAfterRuntimeAction(Action refreshCallback)
+        {
+            refreshCallback?.Invoke();
+            EditorApplication.delayCall += () => refreshCallback?.Invoke();
+        }
+
+        private static void PopUpWindow(string windowName)
+        {
+            Type windowType = FindWindowType(windowName);
+            if (windowType == null)
+            {
+                Debug.LogWarning($"[UISystemView] 未找到窗口类型，无法手动弹出窗口：{windowName}");
+                return;
+            }
+
+            MethodInfo method = FindGenericPopUpWindowMethod();
+            if (method == null)
+            {
+                Debug.LogWarning("[UISystemView] 未找到 UIManager.PopUpWindow<T>() 方法。");
+                return;
+            }
+
+            try
+            {
+                method.MakeGenericMethod(windowType).Invoke(UIManager.Instance, null);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[UISystemView] 手动弹出窗口失败：{windowName}\n{exception}");
+            }
+        }
+
+        private static Type FindWindowType(string windowName)
+        {
+            if (string.IsNullOrEmpty(windowName))
+            {
+                return null;
+            }
+
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type type = assembly.GetType($"WS_Modules.UIModule.{windowName}") ?? assembly.GetType(windowName);
+                if (type != null && typeof(WindowBase).IsAssignableFrom(type))
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
+        private static MethodInfo FindGenericPopUpWindowMethod()
+        {
+            MethodInfo[] methods = typeof(UIManager).GetMethods(BindingFlags.Instance | BindingFlags.Public);
+            foreach (MethodInfo method in methods)
+            {
+                if (method.Name != nameof(UIManager.PopUpWindow) ||
+                    !method.IsGenericMethodDefinition ||
+                    method.GetGenericArguments().Length != 1 ||
+                    method.GetParameters().Length != 0)
+                {
+                    continue;
+                }
+
+                return method;
+            }
+
+            return null;
         }
 
         private static VisualElement CreateStateCell(UIWindowState state)

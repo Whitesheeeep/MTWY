@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using WS_Modules.LogModule;
@@ -16,69 +17,62 @@ namespace WS_Modules.UIModule
                 return;
             }
 
-            var uiContent = Selection.activeGameObject.transform.Find("UIContent");
+            var uiContent = Selection.activeGameObject.transform.Find("UIContent") ?? Selection.activeGameObject.transform;
             if (uiContent == null)
-            {
-                Debug.LogWarning("未找到 UIContent 子对象，请确保选中的 GameObject 下有一个名为 UIContent 的子对象");
-                return;
-            }
-
+                Debug.LogWarning("选择的对象没有 Transform 组件");
             SortChildrenName(uiContent);
         }
 
         private static void SortChildrenName(Transform uiContent)
         {
+            if (uiContent == null) return;
+
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("使用 [] 重命名UI");
+
+            SortChildrenNameInternal(uiContent);
+
+            Undo.CollapseUndoOperations(group);
+        }
+
+        private static void SortChildrenNameInternal(Transform uiContent)
+        {
             foreach (Transform child in uiContent)
             {
-                if (child == uiContent) continue; // 跳过 UIContent 本身
-                
-                Debug.Log("正在处理: " + child.name);
+                if (child.gameObject.name == "UIContent") continue;
+
                 if (child.name.Contains("[") && child.name.Contains("]"))
                 {
-                    continue; // 已经包含组件类型标识，跳过
+                    SortChildrenNameInternal(child);
+                    continue;
                 }
-                if (child.GetComponent<Button>() != null)
+
+                string prefix = GetUIPrefix(child);
+                if (!string.IsNullOrEmpty(prefix))
                 {
-                    child.name = $"[Button]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
+                    Undo.RecordObject(child, "使用 [] 重命名UI");
+                    child.name = $"{prefix}{child.name}";
+                    EditorUtility.SetDirty(child);
                 }
-                else if (child.GetComponent<InputField>() != null)
-                {
-                    child.name = $"[InputField]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<Dropdown>() != null)
-                {
-                    child.name = $"[Dropdown]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<Toggle>() != null)
-                {
-                    child.name = $"[Toggle]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<Slider>() != null)
-                {
-                    child.name = $"[Slider]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<ScrollRect>() != null)
-                {
-                    child.name = $"[ScrollRect]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<Image>() != null)
-                {
-                    child.name = $"[Image]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                else if (child.GetComponent<Text>() != null)
-                {
-                    child.name = $"[Text]{child.name}";
-                    Debug.Log("重命名为: " + child.name);
-                }
-                Debug.Log("完成处理: " + child.name);
+
+                SortChildrenNameInternal(child);
             }
+        }
+
+        private static string GetUIPrefix(Transform child)
+        {
+            if (child.GetComponent<Button>() != null) return "[Button]";
+            if (child.GetComponent<InputField>() != null) return "[InputField]";
+            if (child.GetComponent<Dropdown>() != null) return "[Dropdown]";
+            if (child.GetComponent<Toggle>() != null) return "[Toggle]";
+            if (child.GetComponent<Slider>() != null) return "[Slider]";
+            if (child.GetComponent<ScrollRect>() != null) return "[ScrollRect]";
+            if (child.GetComponent<Image>() != null) return "[Image]";
+            if (child.GetComponent<Text>() != null) return "[Text]";
+            if (child.GetComponent<TMP_Text>() != null) return "[TMP_Text]";
+
+            return null;
         }
     }
 }

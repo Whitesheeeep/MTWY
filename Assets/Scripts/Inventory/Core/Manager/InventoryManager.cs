@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GameData;
 using Sirenix.OdinInspector;
@@ -9,64 +9,113 @@ using WS_Modules.Singleton;
 namespace Inventory
 {
     /// <summary>
-    /// 运行时背包管理器，统一管理 Bar 和 Bag 数据，并通过 Scheduler 协调二者之间的数据流转。
+    /// 运行时背包管理器，统一管理玩家 Inventory 的 Bar 与 Bag 容器生命周期和聚合业务。
     /// </summary>
     public sealed class InventoryManager : SingletonMonoBase<InventoryManager>
     {
-        [SerializeField] private int barCapacity = 10;
-        [SerializeField] private int bagCapacity = 30;
-        [SerializeField] private int capacity = 60;
-        [SerializeField] private int maxStackCount = 64;
+        [LabelText("Bar 容器")]
+        [SerializeField] private InventoryDataContainer barContainer = new InventoryDataContainer(10);
 
-        [ReadOnly]
-        [SerializeField] private InventoryData barData = new InventoryData();
+        [LabelText("Bag 容器")]
+        [SerializeField] private ExpandableInventoryDataContainer bagContainer = new ExpandableInventoryDataContainer(30, 60);
 
-        [ReadOnly]
-        [SerializeField] private InventoryData bagData = new InventoryData();
-
-        private readonly IEventCenter<int> eventModule = new EventCenterModule<int>();
         private IItemDatabase itemDatabase;
-        private InventoryScheduler scheduler;
+        private bool initialized;
+
+        /// <summary>
+        /// InventoryManager 完成运行时依赖初始化时触发。
+        /// </summary>
+        public event Action Initialized;
+
+        /// <summary>
+        /// 当前 InventoryManager 是否已完成运行时依赖初始化。
+        /// </summary>
+        public bool IsInitialized => initialized;
 
         /// <summary>
         /// Bar 槽位容量。
         /// </summary>
-        public int BarCapacity => barCapacity;
+        public int BarCapacity => barContainer?.Capacity ?? 0;
 
         /// <summary>
         /// Bag 当前已解锁槽位容量。
         /// </summary>
-        public int BagCapacity => bagCapacity;
+        public int BagCapacity => bagContainer?.Capacity ?? 0;
 
         /// <summary>
         /// Bag 最大容量上限。
         /// </summary>
-        public int Capacity => capacity;
+        public int Capacity => bagContainer?.MaxCapacity ?? 0;
 
         /// <summary>
         /// 单个槽位的最大堆叠数量。
         /// </summary>
-        public int MaxStackCount => maxStackCount;
+        public int MaxStackCount => InventoryConstants.MaxStackCount;
+
+        /// <summary>
+        /// 当前 Inventory 使用的物品数据库。
+        /// </summary>
+        public IItemDatabase ItemDatabase
+        {
+            get
+            {
+                ThrowIfNotInitialized();
+                return itemDatabase;
+            }
+        }
+
+        /// <summary>
+        /// Bar 槽位容器。
+        /// </summary>
+        public InventoryDataContainer BarContainer
+        {
+            get
+            {
+                ThrowIfNotInitialized();
+                return barContainer;
+            }
+        }
+
+        /// <summary>
+        /// Bag 槽位容器。
+        /// </summary>
+        public ExpandableInventoryDataContainer BagContainer
+        {
+            get
+            {
+                ThrowIfNotInitialized();
+                return bagContainer;
+            }
+        }
 
         protected override void Awake()
         {
             base.Awake();
-            // 背包和 bar 栏的数据初始化
-            EnsureData();
-            // 数据库拉取
+            EnsureStorageData();
+        }
+
+        private void Start()
+        {
             Initialize();
         }
 
         private void OnValidate()
         {
-            NormalizeSettings();
-            EnsureData();
+            EnsureStorageData();
         }
 
         /// <summary>
         /// 从 GameDatabase 拉取背包依赖的物品数据库。
         /// </summary>
-        public void Initialize() => TryInitializeFromGameDatabase(true);
+        public void Initialize()
+        {
+            if (initialized) return;
+
+            if (TryInitializeFromGameDatabase(true))
+                InitializeRuntimeContainers();
+
+            ThrowIfNotInitialized();
+        }
 
         /// <summary>
         /// 由外部推送背包依赖的物品数据库，适合明确启动顺序的场景。
@@ -74,21 +123,60 @@ namespace Inventory
         /// <param name="database">用于校验物品编号和读取物品配置的数据库。</param>
         public void Initialize(IItemDatabase database)
         {
+            if (initialized)
+                throw new InvalidOperationException("[InventoryManager] Container 已经初始化，运行时不允许替换 IItemDatabase。");
+
             itemDatabase = database ?? throw new ArgumentNullException(nameof(database));
-            EnsureData();
+            InitializeRuntimeContainers();
         }
 
         #region 事件注册
-        public IUnRegister RegisterBarSlotChanged(Action<InventorySlotChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BarSlotChanged, handler);
+        /// <summary>
+        /// 注册 Bar 单槽位变化事件。
+        /// </summary>
+        /// <param name="handler">事件处理函数。</param>
+        /// <returns>注销句柄。</returns>
+        public IUnRegister RegisterBarSlotChanged(Action<InventorySlotChangedEventArgs> handler)
+        {
+            ThrowIfNotInitialized();
+            return barContainer.RegisterSlotChanged(handler);
+        }
 
+        /// <summary>
+        /// 注册 Bag 单槽位变化事件。
+        /// </summary>
+        /// <param name="handler">事件处理函数。</param>
+        /// <returns>注销句柄。</returns>
+        public IUnRegister RegisterBagSlotChanged(Action<InventorySlotChangedEventArgs> handler)
+        {
+            ThrowIfNotInitialized();
+            return bagContainer.RegisterSlotChanged(handler);
+        }
 
-        public IUnRegister RegisterBagSlotChanged(Action<InventorySlotChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BagSlotChanged, handler);
+        /// <summary>
+        /// 注册 Bar 槽位列表整体变化事件。
+        /// </summary>
+        /// <param name="handler">事件处理函数。</param>
+        /// <returns>注销句柄。</returns>
+        public IUnRegister RegisterBarSlotsChanged(Action<InventorySlotsChangedEventArgs> handler)
+        {
+            ThrowIfNotInitialized();
+            return barContainer.RegisterSlotsChanged(handler);
+        }
 
-        public IUnRegister RegisterBarSlotsChanged(Action<InventorySlotsChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BarSlotsChanged, handler);
-
-        public IUnRegister RegisterBagSlotsChanged(Action<InventorySlotsChangedEventArgs> handler) => eventModule.Register((int)InventoryEventType.BagSlotsChanged, handler);
+        /// <summary>
+        /// 注册 Bag 槽位列表整体变化事件。
+        /// </summary>
+        /// <param name="handler">事件处理函数。</param>
+        /// <returns>注销句柄。</returns>
+        public IUnRegister RegisterBagSlotsChanged(Action<InventorySlotsChangedEventArgs> handler)
+        {
+            ThrowIfNotInitialized();
+            return bagContainer.RegisterSlotsChanged(handler);
+        }
         #endregion
 
+        #region 聚合业务
         /// <summary>
         /// 向背包中加入物品，优先进入 Bar，Bar 放不下的剩余物品进入 Bag。
         /// </summary>
@@ -98,16 +186,16 @@ namespace Inventory
         public int AddItem(int itemId, int count)
         {
             EnsureItemExists(itemId);
-            EnsureData();
 
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            int remaining = scheduler.AddItem(itemId, count, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
+            int remaining = barContainer.AddItem(itemId, count);
+            if (remaining > 0)
+                remaining = bagContainer.AddItem(itemId, remaining);
+
             return remaining;
         }
 
         /// <summary>
-        /// 尝试加入物品，只有全部放入 Bar/Bag 时才提交变化。
+        /// 尝试加入物品，只有全部放入 Bar/Bag 时才提交变更。
         /// </summary>
         /// <param name="itemId">物品编号。</param>
         /// <param name="count">需要加入的数量。</param>
@@ -115,20 +203,25 @@ namespace Inventory
         public bool TryAddItem(int itemId, int count)
         {
             EnsureItemExists(itemId);
-            EnsureData();
 
-            InventoryData barSnapshot = barData.Clone();
-            InventoryData bagSnapshot = bagData.Clone();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            int remaining = scheduler.AddItem(itemId, count, maxStackCount, changeSet);
+            InventoryData barSnapshot = barContainer.Data.Clone();
+            InventoryData bagSnapshot = bagContainer.Data.Clone();
+            List<int> barChanged = new List<int>();
+            List<int> bagChanged = new List<int>();
+
+            int remaining = barContainer.Data.AddItem(itemId, count, InventoryConstants.MaxStackCount, barChanged);
+            if (remaining > 0)
+                remaining = bagContainer.Data.AddItem(itemId, remaining, InventoryConstants.MaxStackCount, bagChanged);
+
             if (remaining == 0)
             {
-                NotifyChangeSet(changeSet);
+                barContainer.NotifySlotsChanged(barChanged);
+                bagContainer.NotifySlotsChanged(bagChanged);
                 return true;
             }
 
-            barData.CopyFrom(barSnapshot);
-            bagData.CopyFrom(bagSnapshot);
+            barContainer.Data.CopyFrom(barSnapshot);
+            bagContainer.Data.CopyFrom(bagSnapshot);
             return false;
         }
 
@@ -139,18 +232,7 @@ namespace Inventory
         /// <returns>扩容成功返回 true，参数无效或超过最大容量返回 false。</returns>
         public bool ExpandBagCapacity(int additionalSlotCount)
         {
-            NormalizeSettings();
-            EnsureData();
-
-            if (additionalSlotCount <= 0 || bagCapacity + additionalSlotCount > capacity) return false;
-
-            bagCapacity += additionalSlotCount;
-            bagData.ExpandCapacity(additionalSlotCount);
-
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            changeSet.MarkBagAllChanged();
-            NotifyChangeSet(changeSet);
-            return true;
+            return bagContainer.TryExpandCapacity(additionalSlotCount);
         }
 
         /// <summary>
@@ -162,32 +244,19 @@ namespace Inventory
         public bool RemoveItem(int itemId, int count)
         {
             EnsureItemExists(itemId);
-            EnsureData();
-            if (!HasEnough(itemId, count))
-            {
-                return false;
-            }
+            if (!HasEnough(itemId, count)) return false;
 
-            InventoryChangeSet changeSet = new InventoryChangeSet();
             int remaining = count;
-
-            int bagRemoveCount = Mathf.Min(bagData.GetCount(itemId), remaining);
+            int bagRemoveCount = Mathf.Min(bagContainer.GetCount(itemId), remaining);
             if (bagRemoveCount > 0)
             {
-                List<int> bagChanged = new List<int>();
-                bagData.RemoveItem(itemId, bagRemoveCount, bagChanged);
-                changeSet.AddBagSlots(bagChanged);
+                bagContainer.RemoveItem(itemId, bagRemoveCount);
                 remaining -= bagRemoveCount;
             }
 
             if (remaining > 0)
-            {
-                List<int> barChanged = new List<int>();
-                barData.RemoveItem(itemId, remaining, barChanged);
-                changeSet.AddBarSlots(barChanged);
-            }
+                barContainer.RemoveItem(itemId, remaining);
 
-            NotifyChangeSet(changeSet);
             return true;
         }
 
@@ -197,7 +266,11 @@ namespace Inventory
         /// <param name="itemId">物品编号。</param>
         /// <param name="count">目标数量，0 表示清空该物品。</param>
         /// <returns>设置成功返回 true，槽位不足返回 false。</returns>
-        public bool SetBarCount(int itemId, int count) => SetCount(barData, itemId, count, true);
+        public bool SetBarCount(int itemId, int count)
+        {
+            EnsureItemExists(itemId);
+            return barContainer.SetCount(itemId, count);
+        }
 
         /// <summary>
         /// 设置指定物品在 Bag 中的总数量。
@@ -205,163 +278,10 @@ namespace Inventory
         /// <param name="itemId">物品编号。</param>
         /// <param name="count">目标数量，0 表示清空该物品。</param>
         /// <returns>设置成功返回 true，槽位不足返回 false。</returns>
-        public bool SetBagCount(int itemId, int count) => SetCount(bagData, itemId, count, false);
-
-        /// <summary>
-        /// 移动 Bar 内部槽位。
-        /// </summary>
-        /// <param name="fromIndex">来源槽位索引。</param>
-        /// <param name="toIndex">目标槽位索引。</param>
-        /// <returns>移动成功返回 true。</returns>
-        public bool MoveBarSlot(int fromIndex, int toIndex)
+        public bool SetBagCount(int itemId, int count)
         {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.MoveBarSlot(fromIndex, toIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
-        }
-
-        /// <summary>
-        /// 将 Bar 指定槽位整格丢弃到世界中，成功后通过全局事件中心通知世界生成掉落物。
-        /// </summary>
-        /// <param name="barIndex">Bar 槽位索引。</param>
-        /// <returns>丢弃成功返回 true。</returns>
-        public bool DropBarSlotToWorld(int barIndex)
-        {
-            Debug.Log($"[InventoryManager] 请求丢弃 Bar 槽位 index={barIndex}");
-            return DropSlotToWorld(barData, barIndex, true);
-        }
-
-        /// <summary>
-        /// 将 Bag 指定槽位整格丢弃到世界中，成功后通过全局事件中心通知世界生成掉落物。
-        /// </summary>
-        /// <param name="bagIndex">Bag 槽位索引。</param>
-        /// <returns>丢弃成功返回 true。</returns>
-        public bool DropBagSlotToWorld(int bagIndex)
-        {
-            Debug.Log($"[InventoryManager] 请求丢弃 Bag 槽位 index={bagIndex}");
-            return DropSlotToWorld(bagData, bagIndex, false);
-        }
-
-        /// <summary>
-        /// 移动 Bag 内部槽位。
-        /// </summary>
-        /// <param name="fromIndex">来源槽位索引。</param>
-        /// <param name="toIndex">目标槽位索引。</param>
-        /// <returns>移动成功返回 true。</returns>
-        public bool MoveBagSlot(int fromIndex, int toIndex)
-        {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.MoveBagSlot(fromIndex, toIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
-        }
-
-        /// <summary>
-        /// 将 Bag 槽位移动到 Bar 槽位。
-        /// </summary>
-        /// <param name="bagIndex">Bag 槽位索引。</param>
-        /// <param name="barIndex">Bar 槽位索引。</param>
-        /// <returns>移动成功返回 true。</returns>
-        public bool MoveBagToBar(int bagIndex, int barIndex)
-        {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.MoveBagToBar(bagIndex, barIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
-        }
-
-        /// <summary>
-        /// 将 Bar 槽位移动到 Bag 槽位。
-        /// </summary>
-        /// <param name="barIndex">Bar 槽位索引。</param>
-        /// <param name="bagIndex">Bag 槽位索引。</param>
-        /// <returns>移动成功返回 true。</returns>
-        public bool MoveBarToBag(int barIndex, int bagIndex)
-        {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.MoveBarToBag(barIndex, bagIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
-        }
-
-        /// <summary>
-        /// 合并 Bag 内部槽位。
-        /// </summary>
-        /// <param name="fromIndex">来源槽位索引。</param>
-        /// <param name="toIndex">目标槽位索引。</param>
-        /// <returns>合并成功返回 true。</returns>
-        public bool MergeBagSlots(int fromIndex, int toIndex)
-        {
-            EnsureData();
-            List<int> changed = new List<int>();
-            bool success = bagData.MergeSlots(fromIndex, toIndex, maxStackCount, changed);
-            if (success)
-            {
-                InventoryChangeSet changeSet = new InventoryChangeSet();
-                changeSet.AddBagSlots(changed);
-                NotifyChangeSet(changeSet);
-            }
-
-            return success;
-        }
-
-        /// <summary>
-        /// 拆分 Bag 内部槽位。
-        /// </summary>
-        /// <param name="fromIndex">来源槽位索引。</param>
-        /// <param name="count">拆分数量。</param>
-        /// <param name="toIndex">目标槽位索引。</param>
-        /// <returns>拆分成功返回 true。</returns>
-        public bool SplitBagSlot(int fromIndex, int count, int toIndex)
-        {
-            EnsureData();
-            List<int> changed = new List<int>();
-            bool success = bagData.SplitSlot(fromIndex, count, toIndex, maxStackCount, changed);
-            if (success)
-            {
-                InventoryChangeSet changeSet = new InventoryChangeSet();
-                changeSet.AddBagSlots(changed);
-                NotifyChangeSet(changeSet);
-            }
-
-            return success;
-        }
-
-        /// <summary>
-        /// 从 Bag 拆分指定数量到 Bar。
-        /// </summary>
-        /// <param name="bagIndex">Bag 来源槽位索引。</param>
-        /// <param name="count">拆分数量。</param>
-        /// <param name="barIndex">Bar 目标槽位索引。</param>
-        /// <returns>拆分成功返回 true。</returns>
-        public bool SplitBagToBar(int bagIndex, int count, int barIndex)
-        {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.SplitBagToBar(bagIndex, count, barIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
-        }
-
-        /// <summary>
-        /// 从 Bar 拆分指定数量到 Bag。
-        /// </summary>
-        /// <param name="barIndex">Bar 来源槽位索引。</param>
-        /// <param name="count">拆分数量。</param>
-        /// <param name="bagIndex">Bag 目标槽位索引。</param>
-        /// <returns>拆分成功返回 true。</returns>
-        public bool SplitBarToBag(int barIndex, int count, int bagIndex)
-        {
-            EnsureData();
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            bool success = scheduler.SplitBarToBag(barIndex, count, bagIndex, maxStackCount, changeSet);
-            NotifyChangeSet(changeSet);
-            return success;
+            EnsureItemExists(itemId);
+            return bagContainer.SetCount(itemId, count);
         }
 
         /// <summary>
@@ -371,8 +291,7 @@ namespace Inventory
         /// <returns>物品总数量。</returns>
         public int GetCount(int itemId)
         {
-            EnsureData();
-            return barData.GetCount(itemId) + bagData.GetCount(itemId);
+            return barContainer.GetCount(itemId) + bagContainer.GetCount(itemId);
         }
 
         /// <summary>
@@ -383,7 +302,6 @@ namespace Inventory
         /// <returns>数量足够返回 true。</returns>
         public bool HasEnough(int itemId, int count)
         {
-            EnsureData();
             return GetCount(itemId) >= count;
         }
 
@@ -394,10 +312,20 @@ namespace Inventory
         /// <returns>存在返回 true。</returns>
         public bool Contains(int itemId)
         {
-            EnsureData();
             return GetCount(itemId) > 0;
         }
 
+        /// <summary>
+        /// 清空 Bar 和 Bag 中的全部槽位。
+        /// </summary>
+        public void Clear()
+        {
+            barContainer.Clear();
+            bagContainer.Clear();
+        }
+        #endregion
+
+        #region 查询与存档
         /// <summary>
         /// 尝试读取物品配置数据。
         /// </summary>
@@ -406,7 +334,7 @@ namespace Inventory
         /// <returns>读取成功返回 true。</returns>
         public bool TryGetItemData(int itemId, out ItemData itemData)
         {
-            EnsureInitialized();
+            ThrowIfNotInitialized();
             return itemDatabase.TryGet(itemId, out itemData);
         }
 
@@ -417,8 +345,7 @@ namespace Inventory
         /// <returns>槽位快照。</returns>
         public InventorySlotData GetBarSlot(int index)
         {
-            EnsureData();
-            return barData.GetSlot(index);
+            return barContainer.GetSlot(index);
         }
 
         /// <summary>
@@ -428,8 +355,7 @@ namespace Inventory
         /// <returns>槽位快照。</returns>
         public InventorySlotData GetBagSlot(int index)
         {
-            EnsureData();
-            return bagData.GetSlot(index);
+            return bagContainer.GetSlot(index);
         }
 
         /// <summary>
@@ -438,8 +364,7 @@ namespace Inventory
         /// <returns>Bar 槽位快照列表。</returns>
         public IReadOnlyList<InventorySlotData> GetBarSlots()
         {
-            EnsureData();
-            return barData.GetSlotsSnapshot();
+            return barContainer.GetSlotsSnapshot();
         }
 
         /// <summary>
@@ -448,8 +373,7 @@ namespace Inventory
         /// <returns>Bag 槽位快照列表。</returns>
         public IReadOnlyList<InventorySlotData> GetBagSlots()
         {
-            EnsureData();
-            return bagData.GetSlotsSnapshot();
+            return bagContainer.GetSlotsSnapshot();
         }
 
         /// <summary>
@@ -458,10 +382,8 @@ namespace Inventory
         /// <param name="source">来源数据。</param>
         public void LoadBar(InventoryData source)
         {
-            LoadData(source, barData, barCapacity);
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            changeSet.MarkBarAllChanged();
-            NotifyChangeSet(changeSet);
+            LoadData(source, barContainer.Data, barContainer.Capacity);
+            barContainer.NotifyAllChanged();
         }
 
         /// <summary>
@@ -470,10 +392,8 @@ namespace Inventory
         /// <param name="source">来源数据。</param>
         public void LoadBag(InventoryData source)
         {
-            LoadData(source, bagData, bagCapacity);
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            changeSet.MarkBagAllChanged();
-            NotifyChangeSet(changeSet);
+            LoadData(source, bagContainer.Data, bagContainer.Capacity);
+            bagContainer.NotifyAllChanged();
         }
 
         /// <summary>
@@ -482,8 +402,7 @@ namespace Inventory
         /// <returns>Bar 数据快照。</returns>
         public InventoryData ExportBarData()
         {
-            EnsureData();
-            return barData.Clone();
+            return barContainer.Data.Clone();
         }
 
         /// <summary>
@@ -492,133 +411,47 @@ namespace Inventory
         /// <returns>Bag 数据快照。</returns>
         public InventoryData ExportBagData()
         {
-            EnsureData();
-            return bagData.Clone();
+            return bagContainer.Data.Clone();
         }
+        #endregion
 
-        /// <summary>
-        /// 清空 Bar 和 Bag 中的全部槽位。
-        /// </summary>
-        public void Clear()
+        #region 内部生命周期
+        private void EnsureStorageData()
         {
-            EnsureData();
-            barData.Clear(null);
-            bagData.Clear(null);
-
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            changeSet.MarkBarAllChanged();
-            changeSet.MarkBagAllChanged();
-            NotifyChangeSet(changeSet);
-        }
-
-        private bool SetCount(InventoryData targetData, int itemId, int count, bool isBar)
-        {
-            EnsureItemExists(itemId);
-            EnsureData();
-
-            List<int> changed = new List<int>();
-            bool success = targetData.SetCount(itemId, count, maxStackCount, changed);
-            if (success)
-            {
-                InventoryChangeSet changeSet = new InventoryChangeSet();
-                if (isBar)
-                {
-                    changeSet.AddBarSlots(changed);
-                }
-                else
-                {
-                    changeSet.AddBagSlots(changed);
-                }
-
-                NotifyChangeSet(changeSet);
-            }
-
-            return success;
-        }
-
-        private bool DropSlotToWorld(InventoryData targetData, int index, bool isBar)
-        {
-            EnsureData();
-            string areaName = isBar ? "Bar" : "Bag";
-            if (index < 0 || index >= targetData.SlotCount)
-            {
-                Debug.LogWarning($"[InventoryManager] 丢弃失败：{areaName} 槽位索引无效 index={index}, slotCount={targetData.SlotCount}");
-                return false;
-            }
-
-            InventorySlotData slot = targetData.GetSlot(index);
-            if (slot.IsEmpty)
-            {
-                Debug.LogWarning($"[InventoryManager] 丢弃失败：{areaName} 槽位为空 index={index}");
-                return false;
-            }
-
-            EnsureItemExists(slot.itemId);
-            if (!itemDatabase.TryGet(slot.itemId, out ItemData itemData))
-            {
-                Debug.LogWarning($"[InventoryManager] 丢弃失败：未找到物品配置 itemId={slot.itemId}");
-                return false;
-            }
-
-            if (!itemData.canDropped)
-            {
-                Debug.LogWarning($"[InventoryManager] 丢弃失败：物品配置不允许丢弃 itemId={slot.itemId}, count={slot.count}");
-                return false;
-            }
-
-            // check 完毕
-            List<int> changed = new List<int>();
-            if (!targetData.RemoveFromSlot(index, slot.count, changed))
-            {
-                Debug.LogWarning($"[InventoryManager] 丢弃失败：移除槽位数据失败 area={areaName}, index={index}, itemId={slot.itemId}, count={slot.count}");
-                return false;
-            }
-
-            InventoryChangeSet changeSet = new InventoryChangeSet();
-            if (isBar) changeSet.AddBarSlots(changed);
-            else changeSet.AddBagSlots(changed);
-
-            NotifyChangeSet(changeSet);
-            Debug.Log($"[InventoryManager] 丢弃成功并准备触发世界生成事件 area={areaName}, index={index}, itemId={slot.itemId}, count={slot.count}");
-            TriggerDropWorldItem(slot.itemId, slot.count);
-            return true;
-        }
-
-        private static void TriggerDropWorldItem(int itemId, int count)
-        {
-            Debug.Log($"[InventoryManager] 触发全局丢弃事件 event={E_InventoryEvent.DropWorldItemRequested}, itemId={itemId}, count={count}");
-            WS_Modules.CustomEventSystem.EventSystem.EventTrigger_Int(
-                (int)E_InventoryEvent.DropWorldItemRequested,
-                new InventoryDropWorldItemEventArgs(itemId, count));
-        }
-
-        private void EnsureData()
-        {
+            barContainer ??= new InventoryDataContainer(10);
+            bagContainer ??= new ExpandableInventoryDataContainer(30, 60);
             NormalizeSettings();
-            barData ??= new InventoryData();
-            bagData ??= new InventoryData();
-            barData.NormalizeCapacity(barCapacity);
-            bagData.NormalizeCapacity(bagCapacity);
-            scheduler = new InventoryScheduler(barData, bagData);
+            barContainer.NormalizeCapacity(barContainer.Capacity);
+            bagContainer.NormalizeCapacity(bagContainer.Capacity);
+        }
+
+        private void InitializeRuntimeContainers()
+        {
+            if (itemDatabase == null)
+                throw new InvalidOperationException("[InventoryManager] IItemDatabase 未初始化，无法创建 InventoryDataContainer。");
+
+            EnsureStorageData();
+            barContainer.InitializeRuntime(itemDatabase);
+            bagContainer.InitializeRuntime(itemDatabase);
+            initialized = true;
+            Initialized?.Invoke();
+        }
+
+        private void ThrowIfNotInitialized()
+        {
+            if (initialized) return;
+
+            throw new InvalidOperationException("[InventoryManager] 尚未完成初始化，请确认外部依赖已在 Start 阶段完成。");
         }
 
         private void NormalizeSettings()
         {
-            barCapacity = Mathf.Max(0, barCapacity);
-            bagCapacity = Mathf.Max(0, bagCapacity);
-            capacity = Mathf.Max(bagCapacity, capacity);
-            maxStackCount = Mathf.Max(1, maxStackCount);
+            bagContainer?.NormalizeMaxCapacity(Capacity);
         }
 
         private void LoadData(InventoryData source, InventoryData target, int targetCapacity)
         {
-            if (source == null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
-
-            EnsureInitialized();
-            EnsureData();
+            if (source == null) throw new ArgumentNullException(nameof(source));
 
             InventoryData normalized = new InventoryData();
             normalized.NormalizeCapacity(targetCapacity);
@@ -627,82 +460,18 @@ namespace Inventory
             for (int i = 0; i < sourceSlots.Count && i < targetCapacity; i++)
             {
                 InventorySlotData slot = sourceSlots[i];
-                if (slot.IsEmpty)
-                {
-                    continue;
-                }
+                if (slot.IsEmpty) continue;
 
                 EnsureItemExists(slot.itemId);
-                normalized.SetSlot(i, slot.itemId, slot.count, maxStackCount, null);
+                normalized.SetSlot(i, slot.itemId, slot.count, InventoryConstants.MaxStackCount, null);
             }
 
             target.CopyFrom(normalized);
         }
 
-        private void NotifyChangeSet(InventoryChangeSet changeSet)
-        {
-            if (changeSet == null || changeSet.IsEmpty)
-            {
-                return;
-            }
-
-            // bar 检查
-            if (changeSet.BarAllChanged)
-            {
-                eventModule.EventTrigger(
-                    (int)InventoryEventType.BarSlotsChanged,
-                    InventorySlotsChangedEventArgs.Default);
-            }
-            else
-            {
-                foreach (int index in changeSet.BarChangedIndices)
-                {
-                    eventModule.EventTrigger(
-                        (int)InventoryEventType.BarSlotChanged,
-                        new InventorySlotChangedEventArgs(index));
-                }
-            }
-
-            // bag 检查
-            if (changeSet.BagAllChanged)
-            {
-                eventModule.EventTrigger(
-                    (int)InventoryEventType.BagSlotsChanged,
-                    InventorySlotsChangedEventArgs.Default);
-            }
-            else
-            {
-                foreach (int index in changeSet.BagChangedIndices)
-                {
-                    eventModule.EventTrigger(
-                        (int)InventoryEventType.BagSlotChanged,
-                        new InventorySlotChangedEventArgs(index));
-                }
-            }
-        }
-
-        // 尝试从 GameDatabase 拉取 IItemDatabase，成功后赋值并返回 true，失败返回 false。
-        private void EnsureInitialized()
-        {
-            if (itemDatabase != null)
-            {
-                return;
-            }
-
-            if (TryInitializeFromGameDatabase(false))
-            {
-                return;
-            }
-
-            throw new InvalidOperationException("[InventoryManager] IItemDatabase 未注册，请先完成 GameDatabase 注册。");
-        }
-
         private bool TryInitializeFromGameDatabase(bool logWarning)
         {
-            if (itemDatabase != null)
-            {
-                return true;
-            }
+            if (itemDatabase != null) return true;
 
             if (GameDatabase.TryGet(out IItemDatabase database))
             {
@@ -711,20 +480,17 @@ namespace Inventory
             }
 
             if (logWarning)
-            {
-                Debug.LogWarning("[InventoryManager] GameDatabase 尚未注册 IItemDatabase，稍后使用背包时会再次尝试拉取。");
-            }
+                Debug.LogWarning("[InventoryManager] GameDatabase 尚未注册 IItemDatabase，InventoryManager 暂时无法完成运行时初始化。");
 
             return false;
         }
 
         private void EnsureItemExists(int itemId)
         {
-            EnsureInitialized();
+            ThrowIfNotInitialized();
             if (!itemDatabase.TryGet(itemId, out _))
-            {
                 throw new KeyNotFoundException($"[InventoryManager] 未找到物品配置，itemId: {itemId}");
-            }
         }
+        #endregion
     }
 }

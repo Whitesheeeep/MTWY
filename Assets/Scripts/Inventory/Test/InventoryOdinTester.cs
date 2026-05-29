@@ -1,4 +1,5 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
+using System.Collections.Generic;
 using System.Text;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -10,6 +11,7 @@ namespace Inventory
     /// </summary>
     public sealed class InventoryOdinTester : MonoBehaviour
     {
+        #region 字段
         [InfoBox("这个组件只通过场景中的 InventoryManager 测试背包生产接口，不直接操作 InventoryData。")]
         [Title("操作参数")]
         [SerializeField] private int itemId = 1001;
@@ -19,7 +21,9 @@ namespace Inventory
         [SerializeField] private int barIndex;
         [SerializeField] private int bagIndex;
         [SerializeField] private int expandSlotCount = 5;
+        #endregion
 
+        #region Manager 测试
         /// <summary>
         /// 通过 InventoryManager 添加物品，用于测试 Bar 优先、剩余进入 Bag 的规则。
         /// </summary>
@@ -77,90 +81,6 @@ namespace Inventory
         }
 
         /// <summary>
-        /// 移动 Bar 内部槽位。
-        /// </summary>
-        [Button("Manager 移动 Bar 槽位")]
-        public void MoveBarSlotByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.MoveBarSlot(fromIndex, toIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 移动 Bar 槽位 from={fromIndex}, to={toIndex}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
-        /// 移动 Bag 内部槽位。
-        /// </summary>
-        [Button("Manager 移动 Bag 槽位")]
-        public void MoveBagSlotByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.MoveBagSlot(fromIndex, toIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 移动 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
-        /// 合并 Bag 内部槽位。
-        /// </summary>
-        [Button("Manager 合并 Bag 槽位")]
-        public void MergeBagSlotsByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.MergeBagSlots(fromIndex, toIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 合并 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
-        /// 拆分 Bag 内部槽位。
-        /// </summary>
-        [Button("Manager 拆分 Bag 槽位")]
-        public void SplitBagSlotByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.SplitBagSlot(fromIndex, count, toIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 拆分 Bag 槽位 from={fromIndex}, to={toIndex}, count={count}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
-        /// 将 Bar 槽位移动到 Bag 槽位。
-        /// </summary>
-        [Button("Manager Bar 移动到 Bag")]
-        public void MoveBarToBagByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.MoveBarToBag(barIndex, bagIndex);
-            Debug.Log($"[InventoryOdinTester] Manager Bar 移动到 Bag barIndex={barIndex}, bagIndex={bagIndex}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
-        /// 将 Bag 槽位移动到 Bar 槽位。
-        /// </summary>
-        [Button("Manager Bag 移动到 Bar")]
-        public void MoveBagToBarByManager()
-        {
-            InventoryManager manager = GetManager();
-            if (manager == null) return;
-
-            bool success = manager.MoveBagToBar(bagIndex, barIndex);
-            Debug.Log($"[InventoryOdinTester] Manager Bag 移动到 Bar bagIndex={bagIndex}, barIndex={barIndex}, success={success}");
-            PrintManagerSlots();
-        }
-
-        /// <summary>
         /// 运行时扩展 Bag 已解锁容量。
         /// </summary>
         [Button("Manager 扩容 Bag")]
@@ -189,35 +109,127 @@ namespace Inventory
             bool slotCountMatched = manager.GetBagSlots().Count == manager.BagCapacity;
             Debug.Log($"[InventoryOdinTester] 测试 Bag 扩容结果 capacityValid={capacityValid}, slotCountMatched={slotCountMatched}, bagCapacity={manager.BagCapacity}, maxCapacity={manager.Capacity}, slotCount={manager.GetBagSlots().Count}");
         }
+        #endregion
 
+        #region Container 测试
         /// <summary>
-        /// 将 Bar 指定槽位整格丢弃到世界事件路径。
+        /// 移动 Bar 内部槽位。
         /// </summary>
-        [Button("Manager 丢弃 Bar 槽位")]
-        public void DropBarSlotByManager()
+        [Button("Container 移动 Bar 槽位")]
+        public void ContainerBarSlotMove()
         {
             InventoryManager manager = GetManager();
             if (manager == null) return;
 
-            bool success = manager.DropBarSlotToWorld(barIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 丢弃 Bar 槽位 barIndex={barIndex}, success={success}");
+            bool success = manager.BarContainer.MoveSlot(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Container 移动 Bar 槽位 from={fromIndex}, to={toIndex}, success={success}");
             PrintManagerSlots();
         }
 
         /// <summary>
-        /// 将 Bag 指定槽位整格丢弃到世界事件路径。
+        /// 移动 Bag 内部槽位。
         /// </summary>
-        [Button("Manager 丢弃 Bag 槽位")]
-        public void DropBagSlotByManager()
+        [Button("Container 移动 Bag 槽位")]
+        public void ContainerBagSlotMove()
         {
             InventoryManager manager = GetManager();
             if (manager == null) return;
 
-            bool success = manager.DropBagSlotToWorld(bagIndex);
-            Debug.Log($"[InventoryOdinTester] Manager 丢弃 Bag 槽位 bagIndex={bagIndex}, success={success}");
+            bool success = manager.BagContainer.MoveSlot(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Container 移动 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
             PrintManagerSlots();
         }
 
+        /// <summary>
+        /// 合并 Bag 内部槽位。
+        /// </summary>
+        [Button("Container 合并 Bag 槽位")]
+        public void ContainerMergeBagSlot()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.BagContainer.MergeSlots(fromIndex, toIndex);
+            Debug.Log($"[InventoryOdinTester] Container 合并 Bag 槽位 from={fromIndex}, to={toIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 拆分 Bag 内部槽位。
+        /// </summary>
+        [Button("Container 拆分 Bag 槽位")]
+        public void ContainerBagSlotSplit()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = manager.BagContainer.SplitSlot(fromIndex, count, toIndex);
+            Debug.Log($"[InventoryOdinTester] Container 拆分 Bag 槽位 from={fromIndex}, to={toIndex}, count={count}, success={success}");
+            PrintManagerSlots();
+        }
+        #endregion
+
+        #region Transfer 测试
+        /// <summary>
+        /// 将 Bar 槽位移动到 Bag 槽位。
+        /// </summary>
+        [Button("Transfer Bar 到 Bag")]
+        public void TransferBarSlotToBag()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = InventorySlotTransferService.MoveSlot(manager.BarContainer, barIndex, manager.BagContainer, bagIndex);
+            Debug.Log($"[InventoryOdinTester] Transfer Bar 到 Bag barIndex={barIndex}, bagIndex={bagIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 将 Bag 槽位移动到 Bar 槽位。
+        /// </summary>
+        [Button("Transfer Bag 到 Bar")]
+        public void TransferBagSlotToBar()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = InventorySlotTransferService.MoveSlot(manager.BagContainer, bagIndex, manager.BarContainer, barIndex);
+            Debug.Log($"[InventoryOdinTester] Transfer Bag 到 Bar bagIndex={bagIndex}, barIndex={barIndex}, success={success}");
+            PrintManagerSlots();
+        }
+        #endregion
+
+        #region Drop 测试
+        /// <summary>
+        /// 通过通用槽位丢弃服务将 Bar 指定槽位整格丢弃到世界事件路径。
+        /// </summary>
+        [Button("通用服务丢弃 Bar 槽位")]
+        public void DropBarSlotByService()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = InventorySlotWorldDropService.DropSlotToWorld(manager.BarContainer, manager.ItemDatabase, barIndex);
+            Debug.Log($"[InventoryOdinTester] 通用服务丢弃 Bar 槽位 barIndex={barIndex}, success={success}");
+            PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 通过通用槽位丢弃服务将 Bag 指定槽位整格丢弃到世界事件路径。
+        /// </summary>
+        [Button("通用服务丢弃 Bag 槽位")]
+        public void DropBagSlotByService()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            bool success = InventorySlotWorldDropService.DropSlotToWorld(manager.BagContainer, manager.ItemDatabase, bagIndex);
+            Debug.Log($"[InventoryOdinTester] 通用服务丢弃 Bag 槽位 bagIndex={bagIndex}, success={success}");
+            PrintManagerSlots();
+        }
+        #endregion
+
+        #region Debug
         /// <summary>
         /// 打印场景中 InventoryManager 的 Bar 和 Bag 数据。
         /// </summary>
@@ -235,13 +247,17 @@ namespace Inventory
             AppendSlots(builder, manager.GetBagSlots());
             Debug.Log(builder.ToString());
         }
+        #endregion
 
+        #region Unity LifeCycle
         private void OnValidate()
         {
             count = Mathf.Max(1, count);
             expandSlotCount = Mathf.Max(1, expandSlotCount);
         }
+        #endregion
 
+        #region Tools
         private static InventoryManager GetManager()
         {
             InventoryManager manager = InventoryManager.Instance;
@@ -250,7 +266,7 @@ namespace Inventory
             return manager;
         }
 
-        private static void AppendSlots(StringBuilder builder, System.Collections.Generic.IReadOnlyList<InventorySlotData> slots)
+        private static void AppendSlots(StringBuilder builder, IReadOnlyList<InventorySlotData> slots)
         {
             for (int i = 0; i < slots.Count; i++)
             {
@@ -259,6 +275,7 @@ namespace Inventory
                 builder.AppendLine($"Slot {i}: {content}");
             }
         }
+        #endregion
     }
 }
 #endif

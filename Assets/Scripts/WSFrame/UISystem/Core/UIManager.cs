@@ -240,6 +240,12 @@ namespace WS_Modules.UIModule
             return lifecycleService.GetWindow<T>();
         }
 
+        public bool TryGetWindow<T>(out T window) where T : WindowBase
+        {
+            window = GetWindow<T>();
+            return window != null;
+        }
+
         /// <summary>
         /// 获取所有窗口运行时快照。
         /// </summary>

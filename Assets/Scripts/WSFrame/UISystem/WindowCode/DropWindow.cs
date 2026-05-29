@@ -43,6 +43,7 @@ namespace WS_Modules.UIModule
 		 //调用机制与Mono Awake一致
 		 public override void OnAwake()
 		 {
+			 SetDoAnimation(false);
 			 BindGeneratedComponents();
 			 base.OnAwake();
              EnsureDropItemReferences();

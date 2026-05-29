@@ -15,6 +15,9 @@ namespace WS_Modules.ConfigInstaller
         [SerializeField, Tooltip("是否在 Awake 时自动执行 rootNode.Register。关闭后可通过右键菜单 Register All 手动执行。")]
         private bool registerOnAwake = true;
 
+        [SerializeField, Tooltip("是否在执行 Register 后销毁安装器对象。")]
+        private bool destroyAfterRegister = true;
+
         private void Awake()
         {
             if (!registerOnAwake)
@@ -29,6 +32,11 @@ namespace WS_Modules.ConfigInstaller
         public void RegisterAll()
         {
             rootNode?.Register();
+
+            if (destroyAfterRegister)
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }

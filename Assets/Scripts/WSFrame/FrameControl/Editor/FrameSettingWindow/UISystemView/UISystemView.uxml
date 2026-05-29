@@ -23,6 +23,7 @@
                     <ui:Label text="FullScreenWindow" class="ui-runtime-cell col-full-screen" />
                     <ui:Label text="HasMask" class="ui-runtime-cell col-has-mask" />
                     <ui:Label text="HasGameObject" class="ui-runtime-cell col-has-game-object" />
+                    <ui:Label text="Actions" class="ui-runtime-cell col-actions" />
                 </ui:VisualElement>
                 <ui:VisualElement name="RuntimeTableBody" class="ui-runtime-table-body" />
             </ui:VisualElement>

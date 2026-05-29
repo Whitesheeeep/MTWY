@@ -22,6 +22,53 @@ namespace WS_Modules.InputModule
             end
         }
 
+        #region Mouse Properties
+        /// <summary>
+        /// 鼠标左键是否在当前帧按下。
+        /// </summary>
+        public bool LeftMouseWasPressedThisFrame
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return isStart && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+#else
+                return false;
+#endif
+            }
+        }
+
+        /// <summary>
+        /// 鼠标左键是否在当前帧释放。
+        /// </summary>
+        public bool LeftMouseWasReleasedThisFrame
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return isStart && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
+#else
+                return false;
+#endif
+            }
+        }
+
+        /// <summary>
+        /// 鼠标当前屏幕坐标。
+        /// </summary>
+        public Vector2 MouseScreenPosition
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return isStart && Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+#else
+                return Vector2.zero;
+#endif
+            }
+        }
+        #endregion
+
         private InputMgr()
         {
             // 注册到公共 Mono 的 Update 中
