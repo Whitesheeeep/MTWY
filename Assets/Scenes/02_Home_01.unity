@@ -10683,8 +10683,7 @@ MonoBehaviour:
   travelerLayerMask:
     serializedVersion: 2
     m_Bits: 256
-  transitionConfig: {fileID: 11400000, guid: fd8f9ed98526e974dbe17656bd9bf35f, type: 2}
-  routeId: 
+  routeId: 02_Home_01_Door
 --- !u!61 &1984189121
 BoxCollider2D:
   m_ObjectHideFlags: 0

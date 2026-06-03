@@ -197,6 +197,11 @@ namespace WS_Modules
             _inspectorDrawer.DrawProperty(target, propertyPath, container);
         }
 
+        private void DrawUnityProperty(Object target, string propertyPath, VisualElement container)
+        {
+            _inspectorDrawer.DrawUnityProperty(target, propertyPath, CreateScrollableModuleBody(container));
+        }
+
         private static ScrollView CreateScrollableModuleBody(VisualElement container)
         {
             var scrollView = new ScrollView();
@@ -303,7 +308,7 @@ namespace WS_Modules
         {
             if (!TryGetFrameSetting(container, out var wsFrameRoot)) return;
 
-            DrawOdinProperty(wsFrameRoot.FrameSetting, "sceneTransitionSetting", container);
+            DrawUnityProperty(wsFrameRoot.FrameSetting, "sceneTransitionSetting", container);
         }
         #endregion
         #endregion

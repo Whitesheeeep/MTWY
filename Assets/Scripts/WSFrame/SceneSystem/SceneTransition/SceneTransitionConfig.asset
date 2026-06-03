@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: SceneTransitionConfig
   m_EditorClassIdentifier: 
   routes:
-  - routeId: 
-    displayName: 
-    targetSceneName: 
-    targetSpawnId: 
+  - routeId: 02_Home_01_Door
+    displayName: Door
+    targetSceneName: 02_Home_01
+    targetSpawnId: Door
     resetRigidbodyVelocity: 1
     applySpawnRotation: 0

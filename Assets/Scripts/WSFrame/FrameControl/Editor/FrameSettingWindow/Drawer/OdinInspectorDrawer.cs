@@ -81,7 +81,10 @@ namespace WS_Modules
                 {
                     serializedObject.Update();
                     EditorGUILayout.PropertyField(serializedProperty, new GUIContent(serializedProperty.displayName), true);
-                    serializedObject.ApplyModifiedProperties();
+                    if (serializedObject.ApplyModifiedProperties())
+                    {
+                        EditorUtility.SetDirty(target);
+                    }
                 });
                 container.Add(imguiContainer);
             }
@@ -117,7 +120,9 @@ namespace WS_Modules
                         EditorGUILayout.PropertyField(serializedProperty, true);
                     }
 
-                    if (tree.ApplyChanges())
+                    bool serializedChanged = serializedObject.ApplyModifiedProperties();
+                    bool odinChanged = tree.ApplyChanges();
+                    if (serializedChanged || odinChanged)
                     {
                         EditorUtility.SetDirty(target);
                     }
@@ -129,6 +134,33 @@ namespace WS_Modules
                 });
                 container.Add(imguiContainer);
             }
+        }
+
+        public void DrawUnityProperty(Object target, string propertyPath, VisualElement container)
+        {
+            if (target == null) return;
+
+            SerializedObject serializedObject = new SerializedObject(target);
+            SerializedProperty serializedProperty = serializedObject.FindProperty(propertyPath);
+
+            if (serializedProperty == null)
+            {
+                container.Add(new Label($"Property '{propertyPath}' not found."));
+                return;
+            }
+
+            var imguiContainer = new IMGUIContainer(() =>
+            {
+                if (serializedObject.targetObject == null) return;
+
+                serializedObject.Update();
+                EditorGUILayout.PropertyField(serializedProperty, true);
+                if (serializedObject.ApplyModifiedProperties())
+                {
+                    EditorUtility.SetDirty(target);
+                }
+            });
+            container.Add(imguiContainer);
         }
 
         // List/Array 用 Unity 原生绘制以避开 Odin List 在嵌入式 IMGUI 面板中的异常，其它字段继续使用 Odin。

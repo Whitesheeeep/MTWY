@@ -19,9 +19,6 @@ namespace WS_Modules
     public class WSFrameRoot : SingletonMonoBase<WSFrameRoot>
     {
         [SerializeField]
-#if UNITY_EDITOR
-        [OnInspectorInit(nameof(RegisterEditorInstance))]
-#endif
         private WSFrameSetting frameSetting;
         public WSFrameSetting FrameSetting => frameSetting;
 

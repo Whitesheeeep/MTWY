@@ -35,7 +35,7 @@ namespace WS_Modules.ConfigInstaller
 
             if (destroyAfterRegister)
             {
-                Destroy(gameObject);
+                Destroy(this);
             }
         }
     }
