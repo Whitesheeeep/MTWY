@@ -11,11 +11,13 @@ namespace WS_Modules
     [CustomEditor(typeof(SceneTransitionTrigger2D))]
     internal sealed class SceneTransitionTrigger2DEditor : Editor
     {
+        private SerializedProperty scriptProperty;
         private SerializedProperty travelerLayerMaskProperty;
         private SerializedProperty routeIdProperty;
 
         private void OnEnable()
         {
+            scriptProperty = serializedObject.FindProperty("m_Script");
             travelerLayerMaskProperty = serializedObject.FindProperty("travelerLayerMask");
             routeIdProperty = serializedObject.FindProperty("routeId");
         }
@@ -24,20 +26,37 @@ namespace WS_Modules
         {
             serializedObject.Update();
 
+            DrawScriptReference();
             EditorGUILayout.PropertyField(travelerLayerMaskProperty);
             DrawRouteSelector();
 
             serializedObject.ApplyModifiedProperties();
         }
 
+        // 绘制 Unity 默认的只读 Script 引用行。
+        private void DrawScriptReference()
+        {
+            if (scriptProperty == null)
+            {
+                return;
+            }
+
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.PropertyField(scriptProperty, new GUIContent("Script"));
+            }
+        }
+
         // 绘制 Route 选择按钮和缺失提示。
         private void DrawRouteSelector()
         {
             SceneTransitionConfig config = ResolveGlobalTransitionConfig(out string configMessage);
+            Rect routeRect = EditorGUILayout.GetControlRect();
+            Rect buttonRect = EditorGUI.PrefixLabel(routeRect, new GUIContent("Route"));
             using (new EditorGUI.DisabledScope(config == null))
             {
                 string buttonText = GetRouteButtonText(config, routeIdProperty.stringValue);
-                if (GUILayout.Button(buttonText, EditorStyles.popup))
+                if (GUI.Button(buttonRect, buttonText, EditorStyles.popup))
                 {
                     ShowRouteMenu(config);
                 }

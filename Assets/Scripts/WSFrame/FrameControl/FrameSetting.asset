@@ -48,3 +48,5 @@ MonoBehaviour:
     - Inventory
   poolingSetting:
     GlobalPrewarmConfig: {fileID: 11400000, guid: a1d1b28afc416a5428c456ba2adeb143, type: 2}
+  sceneTransitionSetting:
+    transitionConfig: {fileID: 11400000, guid: fd8f9ed98526e974dbe17656bd9bf35f, type: 2}
