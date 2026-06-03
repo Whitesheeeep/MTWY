@@ -13,7 +13,8 @@
             registry.Register(new FrameModuleDescriptor("Pooling", "Pooling", 4, DrawPoolingSettings));
             registry.Register(new FrameModuleDescriptor("ResSystem", "ResSystem", 5, DrawResSystemSettings));
             registry.Register(new FrameModuleDescriptor("UISystem", "UISystem", 6, DrawUISystemSettings));
-            registry.Register(new FrameModuleDescriptor("ConfigInstaller", "ConfigInstaller", 7, DrawConfigInstallerSettings));
+            registry.Register(new FrameModuleDescriptor("SceneTransitionSystem", "SceneTransitionSystem", 7, DrawSceneTransitionSystemSettings));
+            registry.Register(new FrameModuleDescriptor("ConfigInstaller", "ConfigInstaller", 8, DrawConfigInstallerSettings));
 
             return registry;
         }

@@ -11,15 +11,9 @@ namespace WS_Modules.SceneModule
     public sealed class SceneTransitionTrigger2D : MonoBehaviour
     {
         [SerializeField] private LayerMask travelerLayerMask;
-        [SerializeField] private SceneTransitionConfig transitionConfig;
         [SerializeField] private string routeId;
 
         private Collider2D triggerCollider;
-
-        /// <summary>
-        /// 场景转换 Route 配置资产。
-        /// </summary>
-        public SceneTransitionConfig TransitionConfig => transitionConfig;
 
         /// <summary>
         /// 当前触发器选择的 RouteId。
@@ -61,37 +55,12 @@ namespace WS_Modules.SceneModule
         {
             try
             {
-                SceneTransitionRoute route = ResolveRoute();
-                await SceneTransitionSystem.TransitionAsync(traveler, route);
+                await SceneTransitionSystem.TransitionAsync(traveler, routeId);
             }
             catch (System.Exception exception)
             {
                 Debug.LogException(exception, this);
             }
-        }
-
-        // 从配置中解析当前 RouteId 对应的 Route。
-        private SceneTransitionRoute ResolveRoute()
-        {
-            if (transitionConfig == null)
-            {
-                throw new System.InvalidOperationException(
-                    $"{nameof(SceneTransitionTrigger2D)} has no {nameof(SceneTransitionConfig)}.");
-            }
-
-            if (string.IsNullOrWhiteSpace(routeId))
-            {
-                throw new System.InvalidOperationException(
-                    $"{nameof(SceneTransitionTrigger2D)} has no route id.");
-            }
-
-            if (!transitionConfig.TryGetRoute(routeId, out SceneTransitionRoute route))
-            {
-                throw new System.InvalidOperationException(
-                    $"{nameof(SceneTransitionConfig)} does not contain route id '{routeId}'.");
-            }
-
-            return route;
         }
 
         // 判断碰撞对象是否位于允许转场的层。

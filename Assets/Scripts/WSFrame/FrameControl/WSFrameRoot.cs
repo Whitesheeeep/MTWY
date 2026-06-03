@@ -6,6 +6,7 @@ using WS_Modules.Pooling;
 using WS_Modules.ResLoadModule;
 using WS_Modules.Singleton;
 using WS_Modules.AudioSystem;
+using WS_Modules.SceneModule;
 using WS_Modules.UIModule;
 
 namespace WS_Modules
@@ -114,6 +115,7 @@ namespace WS_Modules
 
             WSLog.Init(frameSetting.logSetting);
             ResSystem.Instance.Initialize(_resLoader);
+            SceneTransitionSystem.Initialize(frameSetting.SceneTransitionSettings.TransitionConfig);
             PoolManager.Instance.Initialize(frameSetting.PoolingSettings, _resLoader);
             AudioManager.Instance.Initialize(frameSetting.audioSystemSetting, this.transform, _resLoader);
             UIManager.Instance.Initialize(frameSetting.uiManagerSetting);

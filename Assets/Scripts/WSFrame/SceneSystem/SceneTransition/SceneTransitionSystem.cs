@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,17 +11,65 @@ namespace WS_Modules.SceneModule
     /// </summary>
     public static class SceneTransitionSystem
     {
+        private static readonly Dictionary<string, SceneTransitionRoute> routeMap =
+            new Dictionary<string, SceneTransitionRoute>(StringComparer.Ordinal);
+
+        private static bool isInitialized;
+        private static bool hasConfig;
+
         /// <summary>
         /// 当前是否正在执行场景转换。
         /// </summary>
         public static bool IsTransitioning { get; private set; }
 
         /// <summary>
-        /// 根据 Route 异步切换场景，并把 traveler 移动到目标场景地点。
+        /// 使用全局场景转换配置初始化运行时 Route 查找表。
+        /// </summary>
+        /// <param name="config">全局场景转换配置资产。</param>
+        public static void Initialize(SceneTransitionConfig config)
+        {
+            routeMap.Clear();
+            isInitialized = true;
+            hasConfig = config != null;
+            if (config == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<SceneTransitionRoute> routes = config.Routes;
+            for (int i = 0; i < routes.Count; i++)
+            {
+                SceneTransitionRoute route = routes[i];
+                if (route == null || string.IsNullOrWhiteSpace(route.RouteId))
+                {
+                    continue;
+                }
+
+                if (routeMap.ContainsKey(route.RouteId))
+                {
+                    Debug.LogWarning(
+                        $"{nameof(SceneTransitionConfig)} contains duplicate RouteId '{route.RouteId}'. The first route will be used.",
+                        config);
+                    continue;
+                }
+
+                routeMap.Add(route.RouteId, route);
+            }
+        }
+
+        /// <summary>
+        /// 根据 RouteId 异步切换场景，并把 traveler 移动到目标场景地点。
         /// </summary>
         /// <param name="traveler">需要移动到目标地点的对象。</param>
-        /// <param name="route">场景转换 Route 配置。</param>
-        public static async UniTask TransitionAsync(Transform traveler, SceneTransitionRoute route)
+        /// <param name="routeId">全局场景转换配置中的 RouteId。</param>
+        public static async UniTask TransitionAsync(Transform traveler, string routeId)
+        {
+            SceneTransitionRoute route = ResolveRoute(routeId);
+            await TransitionAsync(traveler, route);
+        }
+
+        // 根据 Route 异步切换场景，并把 traveler 移动到目标场景地点。
+        private static async UniTask TransitionAsync(Transform traveler, SceneTransitionRoute route)
         {
             ValidateTransitionRequest(traveler, route);
             if (IsTransitioning)
@@ -51,6 +100,36 @@ namespace WS_Modules.SceneModule
             {
                 IsTransitioning = false;
             }
+        }
+
+        // 从运行时查找表解析 RouteId 对应的 Route。
+        private static SceneTransitionRoute ResolveRoute(string routeId)
+        {
+            if (!isInitialized)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(SceneTransitionSystem)} has not been initialized.");
+            }
+
+            if (!hasConfig)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(SceneTransitionSystem)} has no {nameof(SceneTransitionConfig)}.");
+            }
+
+            if (string.IsNullOrWhiteSpace(routeId))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(SceneTransitionTrigger2D)} has no route id.");
+            }
+
+            if (!routeMap.TryGetValue(routeId, out SceneTransitionRoute route))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(SceneTransitionConfig)} does not contain route id '{routeId}'.");
+            }
+
+            return route;
         }
 
         // 校验场景转换请求的必要参数。

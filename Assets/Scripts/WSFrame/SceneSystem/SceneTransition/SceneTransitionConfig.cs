@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using WS_Modules;
 #if UNITY_EDITOR
+using UnityEngine.SceneManagement;
 using UnityEditor;
 #endif
 
@@ -21,41 +21,17 @@ namespace WS_Modules.SceneModule
         [ListDrawerSettings(ShowIndexLabels = true, DraggableItems = true)]
         private List<SceneTransitionRoute> routes = new List<SceneTransitionRoute>();
 
-        private readonly Dictionary<string, SceneTransitionRoute> routeMap =
-            new Dictionary<string, SceneTransitionRoute>(StringComparer.Ordinal);
-
-        private bool mapDirty = true;
-
         /// <summary>
         /// 当前配置的场景转换 Route 列表。
         /// </summary>
         public IReadOnlyList<SceneTransitionRoute> Routes => routes;
 
-        /// <summary>
-        /// 尝试通过 RouteId 获取场景转换 Route。
-        /// </summary>
-        /// <param name="routeId">唯一 RouteId。</param>
-        /// <param name="route">匹配到的场景转换 Route。</param>
-        /// <returns>如果找到匹配 Route，则返回 true。</returns>
-        public bool TryGetRoute(string routeId, out SceneTransitionRoute route)
-        {
-            EnsureRouteMap();
-            return routeMap.TryGetValue(routeId, out route);
-        }
-
-        // 标记 Route 查找表需要重建。
+#if UNITY_EDITOR
+        // 绑定 Route 并执行编辑器校验。
         private void OnValidate()
         {
-            mapDirty = true;
             BindRouteOwners();
             ValidateRoutes();
-        }
-
-        // 标记 Route 查找表需要在运行时第一次查询前构建。
-        private void OnEnable()
-        {
-            mapDirty = true;
-            BindRouteOwners();
         }
 
         // 从当前已加载场景的 SceneSpawnRoot 同步生成或更新 Routes。
@@ -87,7 +63,6 @@ namespace WS_Modules.SceneModule
                 }
             }
 
-            mapDirty = true;
             BindRouteOwners();
             MarkDirtyInEditor();
 
@@ -104,7 +79,6 @@ namespace WS_Modules.SceneModule
             int removedCount = routes.RemoveAll(route => IsRouteInvalidInOpenScenes(route, spawnMap));
             if (removedCount > 0)
             {
-                mapDirty = true;
                 MarkDirtyInEditor();
             }
 
@@ -333,36 +307,9 @@ namespace WS_Modules.SceneModule
         // 标记资产已被编辑器按钮修改。
         private void MarkDirtyInEditor()
         {
-#if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+        }
 #endif
-        }
-
-        // 确保 Route 查找表已经按当前配置构建。
-        private void EnsureRouteMap()
-        {
-            if (!mapDirty)
-            {
-                return;
-            }
-
-            routeMap.Clear();
-            for (int i = 0; i < routes.Count; i++)
-            {
-                SceneTransitionRoute route = routes[i];
-                if (route == null || string.IsNullOrWhiteSpace(route.RouteId))
-                {
-                    continue;
-                }
-
-                if (!routeMap.ContainsKey(route.RouteId))
-                {
-                    routeMap.Add(route.RouteId, route);
-                }
-            }
-
-            mapDirty = false;
-        }
     }
 
     /// <summary>
@@ -371,8 +318,10 @@ namespace WS_Modules.SceneModule
     [Serializable]
     public sealed class SceneTransitionRoute
     {
+#if UNITY_EDITOR
         [NonSerialized]
         private SceneTransitionConfig owner;
+#endif
 
         [SerializeField]
         [LabelText("Route Id")]
@@ -391,7 +340,9 @@ namespace WS_Modules.SceneModule
         [LabelText("Target Spawn Id")]
         [InfoBox("TargetSpawnId is synced from SceneSpawnRoot.SpawnEntries in currently open scenes. " +
                  "After editing SceneSpawnRoot, refresh routes from the SceneTransitionConfig buttons.")]
+#if UNITY_EDITOR
         [InfoBox("@GetInvalidRouteMessage()", InfoMessageType.Warning, "@ShouldShowInvalidRouteBox()")]
+#endif
         private string targetSpawnId;
 
         [SerializeField]
@@ -432,6 +383,7 @@ namespace WS_Modules.SceneModule
         /// </summary>
         public bool ApplySpawnRotation => applySpawnRotation;
 
+#if UNITY_EDITOR
         // 记录所属 Config，供 Odin Inspector 读取编辑器缓存。
         internal void SetOwner(SceneTransitionConfig config)
         {
@@ -469,8 +421,10 @@ namespace WS_Modules.SceneModule
         {
             return owner != null && owner.IsRouteInvalidForInspector(this);
         }
+#endif
     }
 
+#if UNITY_EDITOR
     // 当前已加载场景中的 SpawnId 查询数据。
     internal sealed class OpenSceneSpawnMap
     {
@@ -478,4 +432,5 @@ namespace WS_Modules.SceneModule
         internal readonly Dictionary<string, HashSet<string>> SpawnIdsByScene =
             new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
     }
+#endif
 }

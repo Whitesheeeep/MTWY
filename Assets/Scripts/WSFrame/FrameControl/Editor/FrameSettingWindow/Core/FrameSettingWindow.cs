@@ -299,7 +299,14 @@ namespace WS_Modules
             _poolSystemView.Draw(container, poolSystemTemplate);
         }
 
+        private void DrawSceneTransitionSystemSettings(VisualElement container)
+        {
+            if (!TryGetFrameSetting(container, out var wsFrameRoot)) return;
+
+            DrawOdinProperty(wsFrameRoot.FrameSetting, "sceneTransitionSetting", container);
+        }
         #endregion
         #endregion
+
     }
 }
