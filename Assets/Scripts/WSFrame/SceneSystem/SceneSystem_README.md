@@ -200,3 +200,63 @@ private void OnDisable()
 }
 ```
 
+### 4.5 Route 配置式场景转换
+
+Route 转场用于 2D 角色进入触发器后切换到目标场景，并落到目标场景配置的地点。转场不新增事件；Loading UI、Fader、日志等仍然监听 `SceneSystem.RegisterLoad...`。
+
+#### 目标场景配置 SceneSpawnRoot
+
+在目标场景中创建一个管理落点的父物体并挂载 `SceneSpawnRoot`。`SceneSpawnRoot` 维护 `TargetSpawnId -> Transform` 的序列化表，子物体名称只用于整理层级，不参与运行时查找。
+
+```text
+TownScene
+└── SceneSpawnRoot
+    ├── NorthGateTransform
+    └── HouseDoorTransform
+```
+
+`SceneSpawnRoot` 表示例：
+
+```text
+NorthGate -> NorthGateTransform
+HouseDoor -> HouseDoorTransform
+```
+
+#### Route 配置
+
+创建 `SceneTransitionConfig`，每条 Route 表示“去哪个场景、去哪个地点”。
+
+```text
+RouteId: ToTownNorthGate
+DisplayName: NorthGate
+TargetSceneName: TownScene
+TargetSpawnId: NorthGate
+ResetRigidbodyVelocity: true
+ApplySpawnRotation: false
+```
+
+#### 触发器配置
+
+在源场景的门或区域物体上挂 `SceneTransitionTrigger2D`：
+
+```text
+TravelerLayerMask: Player
+TransitionConfig: SceneTransitionConfig
+Route: TownScene/NorthGate
+```
+
+Route 字段使用 Editor-only 分层菜单，菜单内容只来自 `SceneTransitionConfig.Routes`，不会扫描目标场景。选择后触发器只保存 `routeId`。
+
+运行时流程：
+
+```text
+玩家进入触发器
+-> SceneTransitionTrigger2D 根据 routeId 读取 Route
+-> SceneTransitionSystem 调用 SceneSystem.LoadSceneAsync(TargetSceneName)
+-> 在目标场景查找 SceneSpawnRoot
+-> 用 TargetSpawnId 获取 Transform
+-> 移动玩家或触发对象到目标位置
+```
+
+如果缺少 `SceneTransitionConfig`、Route、`SceneSpawnRoot` 或 `TargetSpawnId`，系统会抛出明确异常；已经完成的场景加载不会回滚。
+
