@@ -13,6 +13,8 @@ namespace WS_Modules.UIModule
 		private void BindGeneratedComponents()
 		{
 			dataCompt = GameObject.GetComponent<BagWindowDataComponent>();
+			FullScreenWindow = dataCompt.IsFullWindow;
+			SetDoAnimation(dataCompt.DoAnimation);
 			dataCompt.InitComponent(this);
 		}
 	}

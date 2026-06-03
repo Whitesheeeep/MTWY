@@ -12,6 +12,10 @@ namespace WS_Modules.UIModule
 {
 	public class BagWindowDataComponent : MonoBehaviour
 	{
+		//窗口配置
+		public bool IsFullWindow;
+		public bool DoAnimation = true;
+
 		//自定义字段
 		public InventoryBagView BagContentBlockInventoryBagView;
 

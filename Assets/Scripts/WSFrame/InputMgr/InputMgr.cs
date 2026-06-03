@@ -15,6 +15,8 @@ namespace WS_Modules.InputModule
     {
         private bool isStart = true;
         private IEventCenter<E_InputEvent> eventCenter = new EventCenterModule<E_InputEvent>();
+        private PlayerDirection lastMoveDirection = PlayerDirection.Down;
+        private Vector2 lastRawMoveInput;
 
         public enum E_InputEvent
         {
@@ -107,6 +109,10 @@ namespace WS_Modules.InputModule
             // 新输入系统逻辑 (如果安装了插件并在宏定义中开启)
 #if ENABLE_INPUT_SYSTEM
             CheckNewInput();
+            if (defaultInputSystem != null)
+            {
+                UpdateLastMoveDirection(defaultInputSystem.Player.Move.ReadValue<Vector2>());
+            }
 #endif
         }
 
@@ -166,9 +172,48 @@ namespace WS_Modules.InputModule
         #region 新输入系统 (New Input System)
 #if ENABLE_INPUT_SYSTEM
         private GlobalInput defaultInputSystem;
-        public Vector2 MoveDir => (isStart && defaultInputSystem != null)
-            ? defaultInputSystem.Player.Move.ReadValue<Vector2>().normalized
-            : Vector2.zero;
+#endif
+        public Vector2 MoveDir
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return (isStart && defaultInputSystem != null)
+                    ? defaultInputSystem.Player.Move.ReadValue<Vector2>().normalized
+                    : Vector2.zero;
+#else
+                return Vector2.zero;
+#endif
+            }
+        }
+
+        public bool IsRunPressed
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                return isStart && defaultInputSystem != null && defaultInputSystem.Player.Run.IsPressed();
+#else
+                return false;
+#endif
+            }
+        }
+
+        public PlayerDirection LastMoveDirection
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                if (isStart && defaultInputSystem != null)
+                {
+                    UpdateLastMoveDirection(defaultInputSystem.Player.Move.ReadValue<Vector2>());
+                }
+#endif
+                return lastMoveDirection;
+            }
+        }
+
+#if ENABLE_INPUT_SYSTEM
         private void InitInputSystem()
         {
             if (defaultInputSystem == null)
@@ -186,6 +231,43 @@ namespace WS_Modules.InputModule
         private void CheckNewInput()
         {
             // 新输入系统通常是基于回调的，但如果需要每帧检查也可以在这里处理
+        }
+        private void UpdateLastMoveDirection(Vector2 rawMoveInput)
+        {
+            bool horizontalChanged = AxisBecameActiveOrChangedSign(lastRawMoveInput.x, rawMoveInput.x);
+            bool verticalChanged = AxisBecameActiveOrChangedSign(lastRawMoveInput.y, rawMoveInput.y);
+
+            if (horizontalChanged && !verticalChanged)
+            {
+                lastMoveDirection = rawMoveInput.x > 0f ? PlayerDirection.Right : PlayerDirection.Left;
+            }
+            else if (verticalChanged && !horizontalChanged)
+            {
+                lastMoveDirection = rawMoveInput.y > 0f ? PlayerDirection.Up : PlayerDirection.Down;
+            }
+            else if (rawMoveInput == Vector2.zero)
+            {
+                lastRawMoveInput = rawMoveInput;
+                return;
+            }
+            else if (lastRawMoveInput == Vector2.zero)
+            {
+                lastMoveDirection = Mathf.Abs(rawMoveInput.x) >= Mathf.Abs(rawMoveInput.y)
+                    ? rawMoveInput.x > 0f ? PlayerDirection.Right : PlayerDirection.Left
+                    : rawMoveInput.y > 0f ? PlayerDirection.Up : PlayerDirection.Down;
+            }
+
+            lastRawMoveInput = rawMoveInput;
+        }
+
+        private static bool AxisBecameActiveOrChangedSign(float previous, float current)
+        {
+            if (Mathf.Approximately(current, 0f))
+            {
+                return false;
+            }
+
+            return Mathf.Approximately(previous, 0f) || Mathf.Sign(previous) != Mathf.Sign(current);
         }
 #endif
         #endregion

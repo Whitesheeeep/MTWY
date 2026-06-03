@@ -7,6 +7,7 @@ namespace WS_Modules.CustomEventSystem
     {
         start = EventIdRange.InventoryStart,
         DropWorldItemRequested = start + 1,
+        BarSlotSelected,
         end,
     }
 
@@ -32,6 +33,16 @@ namespace WS_Modules.CustomEventSystem
         {
             ItemId = itemId;
             Count = count;
+        }
+    }
+
+    public struct InventoryBarSlotSelectedEventArgs
+    {
+        public int ItemId { get; }
+
+        public InventoryBarSlotSelectedEventArgs(int itemId)
+        {
+            ItemId = itemId;
         }
     }
 }
