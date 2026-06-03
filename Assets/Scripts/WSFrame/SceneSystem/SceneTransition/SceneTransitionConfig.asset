@@ -12,4 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a61b487660894432a9343f0673028824, type: 3}
   m_Name: SceneTransitionConfig
   m_EditorClassIdentifier: 
-  routes: []
+  routes:
+  - routeId: 
+    displayName: 
+    targetSceneName: 
+    targetSpawnId: 
+    resetRigidbodyVelocity: 1
+    applySpawnRotation: 0
