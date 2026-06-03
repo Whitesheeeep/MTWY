@@ -13,6 +13,10 @@ namespace WS_Modules.UIModule
 {
 	public class DropWindowDataComponent : MonoBehaviour
 	{
+		//窗口配置
+		public bool IsFullWindow;
+		public bool DoAnimation = false;
+
 		//自定义字段
 		public Image DropItemImage;
 

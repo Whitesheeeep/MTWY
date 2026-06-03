@@ -262,6 +262,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae258ef6a438f9a499e5a99e6b3ada8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsFullWindow: 0
+  DoAnimation: 0
   IntroPanelRectTransform: {fileID: 2201516293370917936}
   NameTMP_Text: {fileID: 1841624341281113122}
   TypeTMP_Text: {fileID: 7051339210296502325}

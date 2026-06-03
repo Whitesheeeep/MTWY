@@ -201,6 +201,8 @@ namespace WS_Modules.UIModule
             sb.AppendLine("\t\tprivate void BindGeneratedComponents()");
             sb.AppendLine("\t\t{");
             sb.AppendLine($"\t\t\tdataCompt = GameObject.GetComponent<{name}DataComponent>();");
+            sb.AppendLine("\t\t\tFullScreenWindow = dataCompt.IsFullWindow;");
+            sb.AppendLine("\t\t\tSetDoAnimation(dataCompt.DoAnimation);");
             sb.AppendLine("\t\t\tdataCompt.InitComponent(this);");
             sb.AppendLine("\t\t}");
             sb.AppendLine("\t}");

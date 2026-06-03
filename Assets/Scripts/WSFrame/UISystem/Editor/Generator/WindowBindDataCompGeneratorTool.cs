@@ -107,6 +107,9 @@ namespace WS_Modules.UIModule
 
             sb.AppendLine($"\tpublic class {name + "Data" + "Component : MonoBehaviour"}");
             sb.AppendLine("\t{");
+            sb.AppendLine("\t\t//窗口配置");
+            sb.AppendLine("\t\tpublic bool IsFullWindow;");
+            sb.AppendLine("\t\tpublic bool DoAnimation = true;\n");
             sb.AppendLine("\t\t//自定义字段");
 
             //根据字段数据列表 声明字段

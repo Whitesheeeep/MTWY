@@ -88,7 +88,7 @@ namespace WS_Modules.UIModule
         /// 选择槽位。
         /// </summary>
         /// <param name="index">槽位索引，传入负数表示取消选中。</param>
-        public void SelectSlot(int index)
+        public virtual void SelectSlot(int index)
         {
             if (selectedSlotIndex == index) return;
 

@@ -1,5 +1,7 @@
 ﻿using GameData;
 using Inventory;
+using UnityEngine;
+using WS_Modules.CustomEventSystem;
 
 namespace WS_Modules.UIModule
 {
@@ -27,6 +29,17 @@ namespace WS_Modules.UIModule
         {
             SelectSlot(index);
             return index >= 0 && index < Slots.Count && !Slots[index].IsEmpty;
+        }
+
+        public override void SelectSlot(int index)
+        {
+            base.SelectSlot(index);
+            // 触发全局快捷栏槽位选中事件，携带选中槽位索引和物品 ID 供外部系统使用。
+            int itemId = index >= 0 && index < Slots.Count && !Slots[index].IsEmpty ? Slots[index].itemId : -1;
+            // Debug.Log(itemId);
+            EventSystem.EventTrigger_Int(
+                (int)E_InventoryEvent.BarSlotSelected,
+                new InventoryBarSlotSelectedEventArgs(itemId));
         }
     }
 }
