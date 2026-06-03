@@ -4,6 +4,9 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using WS_Modules;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace WS_Modules.SceneModule
 {
@@ -17,13 +20,6 @@ namespace WS_Modules.SceneModule
         [LabelText("Routes")]
         [ListDrawerSettings(ShowIndexLabels = true, DraggableItems = true)]
         private List<SceneTransitionRoute> routes = new List<SceneTransitionRoute>();
-
-        [SerializeField]
-        [LabelText("Collected Spawn Ids")]
-        [InfoBox("TargetSpawnId options come from SceneSpawnRoot.SpawnEntries collected from currently open scenes. " +
-                 "After changing SceneSpawnRoot in a scene, click Refresh Spawn Ids From Open Scenes again.")]
-        [ListDrawerSettings(ShowIndexLabels = true, DraggableItems = false, IsReadOnly = true)]
-        private List<SceneSpawnIdCache> collectedSpawnIds = new List<SceneSpawnIdCache>();
 
         private readonly Dictionary<string, SceneTransitionRoute> routeMap =
             new Dictionary<string, SceneTransitionRoute>(StringComparer.Ordinal);
@@ -62,29 +58,58 @@ namespace WS_Modules.SceneModule
             BindRouteOwners();
         }
 
-        // 从当前已加载场景中的 SceneSpawnRoot 收集可选 TargetSpawnId。
-        [Button("Refresh Spawn Ids From Open Scenes")]
-        private void RefreshSpawnIdsFromOpenScenes()
+        // 从当前已加载场景的 SceneSpawnRoot 同步生成或更新 Routes。
+        [Button("Refresh Routes From Open Scene Spawns")]
+        private void RefreshRoutesFromOpenSceneSpawns()
         {
-            collectedSpawnIds.Clear();
-            var cacheByScene = new Dictionary<string, SceneSpawnIdCache>(StringComparer.Ordinal);
+            OpenSceneSpawnMap spawnMap = BuildOpenSceneSpawnMap();
+            int addedCount = 0;
+            int updatedCount = 0;
 
-            for (int i = 0; i < SceneManager.sceneCount; i++)
+            foreach (KeyValuePair<string, HashSet<string>> sceneEntry in spawnMap.SpawnIdsByScene)
             {
-                Scene scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded)
+                foreach (string spawnId in sceneEntry.Value)
                 {
-                    continue;
+                    SceneTransitionRoute route = FindRoute(sceneEntry.Key, spawnId);
+                    if (route == null)
+                    {
+                        routes.Add(SceneTransitionRoute.CreateFromSpawn(
+                            sceneEntry.Key,
+                            spawnId,
+                            GenerateUniqueRouteId(sceneEntry.Key, spawnId)));
+                        addedCount++;
+                    }
+                    else
+                    {
+                        route.UpdateFromSpawn(sceneEntry.Key, spawnId);
+                        updatedCount++;
+                    }
                 }
-
-                CollectSpawnIdsFromScene(scene, cacheByScene);
             }
 
-            collectedSpawnIds.Sort((left, right) =>
-                string.Compare(left.SceneName, right.SceneName, StringComparison.Ordinal));
+            mapDirty = true;
+            BindRouteOwners();
+            MarkDirtyInEditor();
 
             Debug.Log(
-                $"{nameof(SceneTransitionConfig)} refreshed spawn ids from {collectedSpawnIds.Count} open scenes.",
+                $"{nameof(SceneTransitionConfig)} refreshed routes from open scene spawns. Added: {addedCount}, Updated: {updatedCount}.",
+                this);
+        }
+
+        // 删除当前已加载场景中可确认不存在的 Route。
+        [Button("Remove Invalid Routes From Open Scenes")]
+        private void RemoveInvalidRoutesFromOpenScenes()
+        {
+            OpenSceneSpawnMap spawnMap = BuildOpenSceneSpawnMap();
+            int removedCount = routes.RemoveAll(route => IsRouteInvalidInOpenScenes(route, spawnMap));
+            if (removedCount > 0)
+            {
+                mapDirty = true;
+                MarkDirtyInEditor();
+            }
+
+            Debug.Log(
+                $"{nameof(SceneTransitionConfig)} removed {removedCount} invalid routes from open scenes.",
                 this);
         }
 
@@ -93,6 +118,7 @@ namespace WS_Modules.SceneModule
         private void ValidateRoutes()
         {
             BindRouteOwners();
+            OpenSceneSpawnMap spawnMap = BuildOpenSceneSpawnMap();
             var seenIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < routes.Count; i++)
             {
@@ -127,12 +153,11 @@ namespace WS_Modules.SceneModule
                         $"{nameof(SceneTransitionConfig)} route '{route.RouteId}' has no target spawn id.",
                         this);
                 }
-                else if (TryGetCollectedSpawnIds(route.TargetSceneName, out IReadOnlyList<string> spawnIds) &&
-                         !ContainsSpawnId(spawnIds, route.TargetSpawnId))
+                else if (IsRouteInvalidInOpenScenes(route, spawnMap))
                 {
                     Debug.LogWarning(
                         $"{nameof(SceneTransitionConfig)} route '{route.RouteId}' target spawn id '{route.TargetSpawnId}' " +
-                        $"was not collected from scene '{route.TargetSceneName}'.",
+                        $"does not exist in open scene '{route.TargetSceneName}'.",
                         this);
                 }
             }
@@ -147,59 +172,126 @@ namespace WS_Modules.SceneModule
             }
         }
 
-        // 从指定场景的 Root 对象中收集 SpawnId。
-        private void CollectSpawnIdsFromScene(Scene scene, Dictionary<string, SceneSpawnIdCache> cacheByScene)
+        // 查找匹配目标场景和 SpawnId 的已有 Route。
+        private SceneTransitionRoute FindRoute(string sceneName, string targetSpawnId)
         {
-            if (!cacheByScene.TryGetValue(scene.name, out SceneSpawnIdCache sceneCache))
+            for (int i = 0; i < routes.Count; i++)
             {
-                sceneCache = new SceneSpawnIdCache(scene.name);
-                cacheByScene.Add(scene.name, sceneCache);
-                collectedSpawnIds.Add(sceneCache);
+                SceneTransitionRoute route = routes[i];
+                if (route != null &&
+                    string.Equals(route.TargetSceneName, sceneName, StringComparison.Ordinal) &&
+                    string.Equals(route.TargetSpawnId, targetSpawnId, StringComparison.Ordinal))
+                {
+                    return route;
+                }
             }
 
+            return null;
+        }
+
+        // 根据场景和 SpawnId 生成不重复的 RouteId。
+        private string GenerateUniqueRouteId(string sceneName, string targetSpawnId)
+        {
+            string baseRouteId = $"{sceneName}_{targetSpawnId}";
+            string routeId = baseRouteId;
+            int suffix = 1;
+            while (ContainsRouteId(routeId))
+            {
+                routeId = $"{baseRouteId}_{suffix}";
+                suffix++;
+            }
+
+            return routeId;
+        }
+
+        // 判断当前 Routes 中是否已经存在指定 RouteId。
+        private bool ContainsRouteId(string routeId)
+        {
+            for (int i = 0; i < routes.Count; i++)
+            {
+                SceneTransitionRoute route = routes[i];
+                if (route != null && string.Equals(route.RouteId, routeId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // 判断 Route 是否在当前打开的目标场景中已失效。
+        private static bool IsRouteInvalidInOpenScenes(SceneTransitionRoute route, OpenSceneSpawnMap spawnMap)
+        {
+            if (route == null ||
+                string.IsNullOrWhiteSpace(route.TargetSceneName) ||
+                string.IsNullOrWhiteSpace(route.TargetSpawnId) ||
+                !spawnMap.OpenSceneNames.Contains(route.TargetSceneName))
+            {
+                return false;
+            }
+
+            return !spawnMap.SpawnIdsByScene.TryGetValue(route.TargetSceneName, out HashSet<string> spawnIds) ||
+                   !spawnIds.Contains(route.TargetSpawnId);
+        }
+
+        // 供 Route 的 Odin InfoBox 判断当前 Route 是否已失效。
+        internal bool IsRouteInvalidForInspector(SceneTransitionRoute route)
+        {
+            return IsRouteInvalidInOpenScenes(route, BuildOpenSceneSpawnMap());
+        }
+
+        // 构建当前已加载场景中的 SpawnId 查询表。
+        private OpenSceneSpawnMap BuildOpenSceneSpawnMap()
+        {
+            var spawnMap = new OpenSceneSpawnMap();
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                {
+                    continue;
+                }
+
+                spawnMap.OpenSceneNames.Add(scene.name);
+                CollectSpawnIdsFromScene(scene, spawnMap);
+            }
+
+            return spawnMap;
+        }
+
+        // 从指定场景的 Root 对象中收集 SpawnId。
+        private void CollectSpawnIdsFromScene(Scene scene, OpenSceneSpawnMap spawnMap)
+        {
             GameObject[] rootObjects = scene.GetRootGameObjects();
             for (int i = 0; i < rootObjects.Length; i++)
             {
                 SceneSpawnRoot[] roots = rootObjects[i].GetComponentsInChildren<SceneSpawnRoot>(true);
                 for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
                 {
-                    CollectSpawnIdsFromRoot(scene.name, roots[rootIndex], sceneCache);
+                    CollectSpawnIdsFromRoot(scene.name, roots[rootIndex], spawnMap);
                 }
             }
         }
 
         // 从单个 SceneSpawnRoot 中收集有效 SpawnId 并输出配置问题。
-        private void CollectSpawnIdsFromRoot(string sceneName, SceneSpawnRoot root, SceneSpawnIdCache sceneCache)
+        private void CollectSpawnIdsFromRoot(string sceneName, SceneSpawnRoot root, OpenSceneSpawnMap spawnMap)
         {
+            if (!spawnMap.SpawnIdsByScene.TryGetValue(sceneName, out HashSet<string> spawnIds))
+            {
+                spawnIds = new HashSet<string>(StringComparer.Ordinal);
+                spawnMap.SpawnIdsByScene.Add(sceneName, spawnIds);
+            }
+
             IReadOnlyList<SceneSpawnEntry> spawnEntries = root.SpawnEntries;
             for (int i = 0; i < spawnEntries.Count; i++)
             {
                 SceneSpawnEntry entry = spawnEntries[i];
-                if (entry == null)
+                if (!TryValidateSpawnEntry(sceneName, root, entry, i))
                 {
-                    Debug.LogWarning(
-                        $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' has a null spawn entry at index {i}.",
-                        root);
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(entry.TargetSpawnId))
-                {
-                    Debug.LogWarning(
-                        $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' has an empty TargetSpawnId at index {i}.",
-                        root);
-                    continue;
-                }
-
-                if (entry.SpawnTransform == null)
-                {
-                    Debug.LogWarning(
-                        $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' spawn entry '{entry.TargetSpawnId}' has no Transform.",
-                        root);
-                    continue;
-                }
-
-                if (!sceneCache.TryAddSpawnId(entry.TargetSpawnId))
+                if (!spawnIds.Add(entry.TargetSpawnId))
                 {
                     Debug.LogWarning(
                         $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' has duplicate TargetSpawnId '{entry.TargetSpawnId}'.",
@@ -208,35 +300,42 @@ namespace WS_Modules.SceneModule
             }
         }
 
-        // 尝试获取指定场景已经收集到的 SpawnId 列表。
-        internal bool TryGetCollectedSpawnIds(string sceneName, out IReadOnlyList<string> spawnIds)
+        // 校验单条 SpawnEntry 是否可用于生成 Route。
+        private static bool TryValidateSpawnEntry(string sceneName, SceneSpawnRoot root, SceneSpawnEntry entry, int index)
         {
-            for (int i = 0; i < collectedSpawnIds.Count; i++)
+            if (entry == null)
             {
-                SceneSpawnIdCache cache = collectedSpawnIds[i];
-                if (cache != null && string.Equals(cache.SceneName, sceneName, StringComparison.Ordinal))
-                {
-                    spawnIds = cache.SpawnIds;
-                    return true;
-                }
+                Debug.LogWarning(
+                    $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' has a null spawn entry at index {index}.",
+                    root);
+                return false;
             }
 
-            spawnIds = Array.Empty<string>();
-            return false;
+            if (string.IsNullOrWhiteSpace(entry.TargetSpawnId))
+            {
+                Debug.LogWarning(
+                    $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' has an empty TargetSpawnId at index {index}.",
+                    root);
+                return false;
+            }
+
+            if (entry.SpawnTransform == null)
+            {
+                Debug.LogWarning(
+                    $"{nameof(SceneSpawnRoot)} in scene '{sceneName}' spawn entry '{entry.TargetSpawnId}' has no Transform.",
+                    root);
+                return false;
+            }
+
+            return true;
         }
 
-        // 判断已收集列表中是否包含指定 SpawnId。
-        internal static bool ContainsSpawnId(IReadOnlyList<string> spawnIds, string targetSpawnId)
+        // 标记资产已被编辑器按钮修改。
+        private void MarkDirtyInEditor()
         {
-            for (int i = 0; i < spawnIds.Count; i++)
-            {
-                if (string.Equals(spawnIds[i], targetSpawnId, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+#endif
         }
 
         // 确保 Route 查找表已经按当前配置构建。
@@ -290,9 +389,9 @@ namespace WS_Modules.SceneModule
 
         [SerializeField]
         [LabelText("Target Spawn Id")]
-        [InfoBox("@GetTargetSpawnIdInfoMessage()", InfoMessageType.Info, "@ShouldShowTargetSpawnIdInfoBox()")]
-        [InfoBox("@GetMissingTargetSpawnIdMessage()", InfoMessageType.Warning, "@ShouldShowMissingTargetSpawnIdBox()")]
-        [ValueDropdown(nameof(GetTargetSpawnIdDropdown), IsUniqueList = false)]
+        [InfoBox("TargetSpawnId is synced from SceneSpawnRoot.SpawnEntries in currently open scenes. " +
+                 "After editing SceneSpawnRoot, refresh routes from the SceneTransitionConfig buttons.")]
+        [InfoBox("@GetInvalidRouteMessage()", InfoMessageType.Warning, "@ShouldShowInvalidRouteBox()")]
         private string targetSpawnId;
 
         [SerializeField]
@@ -339,103 +438,44 @@ namespace WS_Modules.SceneModule
             owner = config;
         }
 
-        // 根据目标场景返回当前收集到的 SpawnId 下拉项。
-        private IEnumerable<ValueDropdownItem<string>> GetTargetSpawnIdDropdown()
+        // 按场景 SpawnEntry 更新 Route 的目标信息。
+        internal void UpdateFromSpawn(string sceneName, string spawnId)
         {
-            if (owner == null ||
-                string.IsNullOrWhiteSpace(targetSceneName) ||
-                !owner.TryGetCollectedSpawnIds(targetSceneName, out IReadOnlyList<string> spawnIds))
+            targetSceneName = sceneName;
+            targetSpawnId = spawnId;
+            displayName = spawnId;
+        }
+
+        // 创建一条由场景 SpawnEntry 派生的新 Route。
+        internal static SceneTransitionRoute CreateFromSpawn(string sceneName, string spawnId, string routeId)
+        {
+            return new SceneTransitionRoute
             {
-                yield break;
-            }
-
-            for (int i = 0; i < spawnIds.Count; i++)
-            {
-                string spawnId = spawnIds[i];
-                yield return new ValueDropdownItem<string>(spawnId, spawnId);
-            }
+                routeId = routeId,
+                displayName = spawnId,
+                targetSceneName = sceneName,
+                targetSpawnId = spawnId
+            };
         }
 
-        // 说明 TargetSpawnId 的编辑器缓存来源。
-        private string GetTargetSpawnIdInfoMessage()
+        // 获取当前失效提示文本。
+        private string GetInvalidRouteMessage()
         {
-            return string.IsNullOrWhiteSpace(targetSceneName)
-                ? "Set Target Scene before selecting Target Spawn Id."
-                : $"TargetSpawnId options are collected from open scene '{targetSceneName}'. " +
-                  "Open the target scene and refresh the config after editing SceneSpawnRoot.";
+            return $"TargetSpawnId '{targetSpawnId}' does not exist in currently open scene '{targetSceneName}'.";
         }
 
-        // 目标场景没有可用缓存时显示说明。
-        private bool ShouldShowTargetSpawnIdInfoBox()
+        // 判断当前 Route 是否在已打开目标场景中失效。
+        private bool ShouldShowInvalidRouteBox()
         {
-            return owner == null ||
-                   string.IsNullOrWhiteSpace(targetSceneName) ||
-                   !owner.TryGetCollectedSpawnIds(targetSceneName, out IReadOnlyList<string> spawnIds) ||
-                   spawnIds.Count == 0;
-        }
-
-        // 当前 TargetSpawnId 不在缓存中时显示 warning。
-        private string GetMissingTargetSpawnIdMessage()
-        {
-            return $"TargetSpawnId '{targetSpawnId}' was not collected from scene '{targetSceneName}'.";
-        }
-
-        // 判断当前 TargetSpawnId 是否缺失于已收集缓存。
-        private bool ShouldShowMissingTargetSpawnIdBox()
-        {
-            return owner != null &&
-                   !string.IsNullOrWhiteSpace(targetSceneName) &&
-                   !string.IsNullOrWhiteSpace(targetSpawnId) &&
-                   owner.TryGetCollectedSpawnIds(targetSceneName, out IReadOnlyList<string> spawnIds) &&
-                   spawnIds.Count > 0 &&
-                   !SceneTransitionConfig.ContainsSpawnId(spawnIds, targetSpawnId);
+            return owner != null && owner.IsRouteInvalidForInspector(this);
         }
     }
 
-    /// <summary>
-    /// SceneTransitionConfig 中缓存的单个场景 SpawnId 列表，仅用于 Inspector 编辑辅助。
-    /// </summary>
-    [Serializable]
-    internal sealed class SceneSpawnIdCache
+    // 当前已加载场景中的 SpawnId 查询数据。
+    internal sealed class OpenSceneSpawnMap
     {
-        [SerializeField]
-        [LabelText("Scene Name")]
-        private string sceneName;
-
-        [SerializeField]
-        [LabelText("Spawn Ids")]
-        private List<string> spawnIds = new List<string>();
-
-        /// <summary>
-        /// 缓存所属的场景名称。
-        /// </summary>
-        public string SceneName => sceneName;
-
-        /// <summary>
-        /// 从该场景 SceneSpawnRoot 中收集到的 SpawnId 列表。
-        /// </summary>
-        public IReadOnlyList<string> SpawnIds => spawnIds;
-
-        // Unity 序列化使用的默认构造。
-        private SceneSpawnIdCache()
-        {
-        }
-
-        internal SceneSpawnIdCache(string sceneName)
-        {
-            this.sceneName = sceneName;
-        }
-
-        // 添加一个 SpawnId，重复时返回 false。
-        internal bool TryAddSpawnId(string spawnId)
-        {
-            if (SceneTransitionConfig.ContainsSpawnId(spawnIds, spawnId))
-            {
-                return false;
-            }
-
-            spawnIds.Add(spawnId);
-            return true;
-        }
+        internal readonly HashSet<string> OpenSceneNames = new HashSet<string>(StringComparer.Ordinal);
+        internal readonly Dictionary<string, HashSet<string>> SpawnIdsByScene =
+            new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
     }
 }
