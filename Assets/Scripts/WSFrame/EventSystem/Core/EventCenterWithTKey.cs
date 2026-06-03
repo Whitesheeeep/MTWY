@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace WS_Modules.CustomEventSystem
 {
@@ -117,11 +116,6 @@ namespace WS_Modules.CustomEventSystem
             {
                 (eventInfoBase as EasyEvent<T>)?.Invoke(@event);
             }
-            else
-            {
-                Debug.LogWarning(
-                    $"[EventCenter<{typeof(TKey).Name}>] No event registered for key '{key}' when triggering.");
-            }
         }
 
         public void Clear()
@@ -183,11 +177,6 @@ namespace WS_Modules.CustomEventSystem
             if (eventDic.TryGetValue(key, out var eventInfoBase))
             {
                 (eventInfoBase as StructEasyEvent<T>)?.Invoke(@event);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    $"[StructEventCenter<{typeof(TKey).Name}>] No event registered for key '{key}' when triggering.");
             }
         }
 

@@ -2,6 +2,7 @@ using System.Collections;
 using Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using WS_Modules.CustomEventSystem;
 using WS_Modules.SceneModule;
 
 namespace WS_Modules.CameraSystem
@@ -17,6 +18,7 @@ namespace WS_Modules.CameraSystem
         [SerializeField] private bool clearWhenNotFound;
 
         private Coroutine bindCoroutine;
+        private IUnRegister sceneLoadSucceededUnregister;
 
         private void Awake()
         {
@@ -29,7 +31,7 @@ namespace WS_Modules.CameraSystem
         private void OnEnable()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            SceneSystem.OnLoadSceneSucceed += QueueBind;
+            sceneLoadSucceededUnregister = SceneSystem.RegisterLoadSucceeded(OnSceneLoadSucceeded);
         }
 
         private void Start()
@@ -43,10 +45,16 @@ namespace WS_Modules.CameraSystem
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneSystem.OnLoadSceneSucceed -= QueueBind;
+            sceneLoadSucceededUnregister?.UnRegister();
+            sceneLoadSucceededUnregister = null;
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            QueueBind();
+        }
+
+        private void OnSceneLoadSucceeded(SceneLoadSucceededEventArgs _)
         {
             QueueBind();
         }

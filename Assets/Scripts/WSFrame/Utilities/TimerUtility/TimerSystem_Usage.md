@@ -218,6 +218,6 @@ TimerManager.Register(interval, () =>
 
 1. `OnUpdate` 会让 Timer 进入逐帧列表，因此只在确实需要进度时使用。
 2. 回调中可以 `Cancel`、`ResetTime`、`Pause`，系统会根据当前调度状态处理。
-3. 场景切换时 `TimerManager` 已订阅 `SceneSystem.OnLoadSceneStart` 调用 `CancelAll`，避免旧场景回调继续执行。
+3. 场景切换时 `TimerManager` 通过 `SceneSystem.RegisterLoadStarted(...)` 监听加载开始并调用 `CancelAll`；内部保存 `IUnRegister` 并在销毁时注销，避免旧场景回调继续执行。
 4. 如果业务对象销毁时仍持有 `TimerHandle`，建议主动调用 `Cancel()`。
 5. `TimerHandle` 是值类型，可以保存；但不要假设旧 Handle 永远有效，操作前可检查 `IsValid`。

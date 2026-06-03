@@ -8,6 +8,8 @@
 *   **进度监控**: 提供加载进度的实时回调 (0.0 ~ 1.0) 以及全局事件。
 *   **手动激活**: 支持场景加载到 90% 后暂停，等待业务逻辑（如过场动画结束、用户点击）确认后再激活进入场景。
 *   **接口统一**: 同时支持 `string` (场景名) 和 `int` (Build Index) 两种加载方式。
+*   **请求管线统一**: 同步、异步、手动激活加载共用同一套校验、开始、完成、失败、取消事件流程。
+*   **Additive 管理**: 记录由 SceneSystem 以 Additive 模式加载成功的场景，并提供查询、卸载和活动场景切换辅助。
 
 ## 2. 依赖 (Dependencies)
 
@@ -16,19 +18,34 @@
 
 ## 3. 全局事件 (Global Events)
 
-系统提供了两个静态事件，方便其他模块（如 Loading UI）监听全局加载状态：
+系统提供显式注册入口，方便其他模块（如 Loading UI）监听全局加载状态。注册方法会返回 `IUnRegister`，调用方应在自己的生命周期结束时注销：
 
 ```csharp
-// 监听加载进度（0.0 ~ 1.0）
-SceneSystem.OnLoadingSceneProgress += (progress) => {
-    Debug.Log($"Global Loading Progress: {progress}");
-    // Update Loading Bar UI...
-};
+private IUnRegister progressUnRegister;
+private IUnRegister succeededUnRegister;
 
-// 监听加载完成
-SceneSystem.OnLoadSceneSucceed += () => {
-    Debug.Log("Scene Loaded Successfully!");
-};
+private void OnEnable()
+{
+    // 监听加载进度（0.0 ~ 1.0）
+    progressUnRegister = SceneSystem.RegisterLoadProgressChanged(args => {
+        Debug.Log($"Global Loading Progress: {args.Progress}");
+        // Update Loading Bar UI...
+    });
+
+    // 监听加载完成
+    succeededUnRegister = SceneSystem.RegisterLoadSucceeded(args => {
+        Debug.Log($"Scene Loaded Successfully: {args.LoadInfo.Target}");
+    });
+}
+
+private void OnDisable()
+{
+    progressUnRegister?.UnRegister();
+    progressUnRegister = null;
+
+    succeededUnRegister?.UnRegister();
+    succeededUnRegister = null;
+}
 ```
 
 ## 4. API 与使用示例 (Usage Examples)
@@ -61,6 +78,8 @@ Debug.Log("加载完成，虽然上面的 await 已经等到完成了，但这�
 
 ### 4.3 异步加载并手动激活 (Async Load Without Active)
 加载场景到 90% 后停止，等待调用者显式激活。适合需要精确控制转场时机（如等待过场动画播放完毕）的场景。
+
+> 注意：Unity 的 `AsyncOperation` 不能真正取消。场景已经加载到 90% 并等待手动激活时，如果 `CancellationToken` 被取消，SceneSystem 会先放行场景激活，等待 Unity 操作结束，然后触发取消事件并抛出 `OperationCanceledException`，避免加载操作永久卡住。
 
 ```csharp
 // 参数说明：
@@ -97,54 +116,87 @@ void WaitForInput(Action activateHandle)
 ```csharp
 public async UniTask EnterLevel()
 {
-    // 1. 显示 Loading 界面
     UIManager.Show("LoadingPanel");
-    
-    // 2. 开始加载场景，但不立即进入
-    Action activator = null;
-    
-    await SceneSystem.LoadSceneAsyncWithoutActive("Level1", 
-        activeCallBack: (act) => {
-            // 拿到激活器
-            activator = act;
+
+    await SceneSystem.LoadSceneAsyncWithoutActive(
+        "Level1",
+        activeCallBack: activate =>
+        {
+            PlayTransitionAndActivate(activate).Forget();
         },
-        loadingCallBack: (p) => {
-            // 更新 UI 进度条
-            LoadingPanel.SetProgress(p);
-        }
-    );
-    
-    // 此时场景加载到了 90%，且 activeCallBack 已经被调用，activator 已经有值了
-    
-    // 3. 等待 Loading 进度条动画跑完，或者等待玩家按键
-    await UniTask.Delay(1000); 
-    
-    // 4. 激活场景
-    activator?.Invoke();
-    
-    // 5. 等待场景彻底切换完成（SceneSystem 内部会等待激活后的最后一步）
-    // 注意：上面的 await LoadSceneAsyncWithoutActive 其实在 activator 没调用前是不会结束的吗？
-    // 修正：LoadSceneAsyncWithoutActive 内部是 await 等待直到 isDone。
-    // 所以逻辑上，activeCallBack 是在内部 while 循环中调用的。
-    // 如果你在 activeCallBack 里直接 invoke，那就会直接往下走。
-    // 如果你在 activeCallBack 里只是存了引用（如上例），那么 LoadSceneAsyncWithoutActive 的 Task 就会一直卡住等待。
-    // 这是一个死锁！
-    
-    // --- 正确写法 ---
-    await SceneSystem.LoadSceneAsyncWithoutActive("Level1", (activate) => {
-        // 在这个回调里，你可以做任何异步等待，然后再激活
-        AsyncActivate(activate).Forget();
-    }, (p) => {
-        Debug.Log(p);
-    });
+        loadingCallBack: progress =>
+        {
+            LoadingPanel.SetProgress(progress);
+        });
 }
 
-private async UniTaskVoid AsyncActivate(Action activate)
+private async UniTaskVoid PlayTransitionAndActivate(Action activate)
 {
-    Debug.Log("场景准备好了，播放 3秒 过场动画...");
+    Debug.Log("场景准备好了，播放 3 秒过场动画...");
     await UniTask.Delay(3000);
     Debug.Log("动画结束，进入场景！");
     activate.Invoke();
+}
+```
+
+### 4.4 Additive 场景管理
+
+SceneSystem 只追踪自己通过 `LoadSceneMode.Additive` 成功加载的场景，不会自动同步外部直接调用 `SceneManager` 加载的场景。
+
+```csharp
+// Additive 加载场景，成功后会进入 SceneSystem 的 Additive 记录集合
+await SceneSystem.LoadSceneAsync("HUDScene", mode: LoadSceneMode.Additive);
+
+if (SceneSystem.IsSceneLoaded("HUDScene"))
+{
+    Debug.Log("HUDScene is tracked by SceneSystem.");
+}
+
+// 切换当前活动场景
+SceneSystem.SetActiveScene("HUDScene");
+
+// 获取当前记录的 Additive 场景名称快照
+string[] additiveScenes = SceneSystem.GetLoadedAdditiveSceneNames();
+
+// 卸载由 SceneSystem 记录的 Additive 场景
+await SceneSystem.UnloadSceneAsync("HUDScene");
+```
+
+卸载 API 不支持取消。Unity 已经开始的卸载操作不能被真正中断，SceneSystem 会等待 Unity 操作结束后触发 `UnloadSucceeded`；校验失败或 Unity 启动卸载失败时触发 `UnloadFailed`。
+
+```csharp
+private IUnRegister unloadStartedUnRegister;
+private IUnRegister unloadSucceededUnRegister;
+private IUnRegister unloadFailedUnRegister;
+
+private void OnEnable()
+{
+    unloadStartedUnRegister = SceneSystem.RegisterUnloadStarted(args =>
+    {
+        Debug.Log($"Unload started: {args.UnloadInfo.Target}");
+    });
+
+    unloadSucceededUnRegister = SceneSystem.RegisterUnloadSucceeded(args =>
+    {
+        Debug.Log($"Unload succeeded: {args.UnloadInfo.Target}");
+    });
+
+    unloadFailedUnRegister = SceneSystem.RegisterUnloadFailed(args =>
+    {
+        Debug.LogError($"Unload failed: {args.UnloadInfo.Target}, {args.Exception}");
+    });
+}
+
+private void OnDisable()
+{
+    unloadStartedUnRegister?.UnRegister();
+    unloadStartedUnRegister = null;
+
+    unloadSucceededUnRegister?.UnRegister();
+    unloadSucceededUnRegister = null;
+
+    unloadFailedUnRegister?.UnRegister();
+    unloadFailedUnRegister = null;
 }
 ```
 

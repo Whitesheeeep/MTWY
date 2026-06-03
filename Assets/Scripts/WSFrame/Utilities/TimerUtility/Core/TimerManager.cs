@@ -1,4 +1,5 @@
 using System;
+using WS_Modules.CustomEventSystem;
 using WS_Modules.SceneModule;
 using WS_Modules.Singleton;
 
@@ -78,6 +79,7 @@ namespace WS_Modules.Utilities
         private readonly TimerQueryService _queries = new TimerQueryService();
         private readonly TimerScheduler _scheduler = new TimerScheduler();
         private readonly TimerStateController _states = new TimerStateController();
+        private IUnRegister sceneLoadStartedUnregister;
         private ITimerSchedulerContext _schedulerContext;
 
         private ITimerSchedulerContext SchedulerContext
@@ -100,16 +102,17 @@ namespace WS_Modules.Utilities
         private void Start()
         {
             // 场景切换时清理所有计时器，避免上一场景的延迟回调在新场景中继续执行。
-            SceneSystem.OnLoadSceneStart += OnSceneSystemOnOnLoadSceneStart;
+            sceneLoadStartedUnregister = SceneSystem.RegisterLoadStarted(OnSceneLoadStarted);
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            SceneSystem.OnLoadSceneStart -= OnSceneSystemOnOnLoadSceneStart;
+            sceneLoadStartedUnregister?.UnRegister();
+            sceneLoadStartedUnregister = null;
         }
 
-        private void OnSceneSystemOnOnLoadSceneStart(string _)
+        private void OnSceneLoadStarted(SceneLoadStartedEventArgs _)
         {
             CancelAll();
         }
