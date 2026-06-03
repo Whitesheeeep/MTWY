@@ -206,7 +206,7 @@ Route 转场用于 2D 角色进入触发器后切换到目标场景，并落到�
 
 #### 目标场景配置 SceneSpawnRoot
 
-在目标场景中创建一个管理落点的父物体并挂载 `SceneSpawnRoot`。`SceneSpawnRoot` 维护 `TargetSpawnId -> Transform` 的序列化表，子物体名称只用于整理层级，不参与运行时查找。
+在目标场景中放置 `SceneTransition/Prefabs/SceneSpawnRoot.prefab`，或创建一个管理落点的父物体并挂载 `SceneSpawnRoot`。`SceneSpawnRoot` 维护 `TargetSpawnId -> Transform` 的序列化表，子物体名称只用于整理层级，不参与运行时查找。
 
 ```text
 TownScene

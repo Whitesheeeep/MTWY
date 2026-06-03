@@ -13,6 +13,8 @@ namespace WS_Modules.SceneModule
     {
         [SerializeField]
         [LabelText("Spawn Entries")]
+        [Tooltip("记录场景中各个转移点的配置列表，每条配置包含一个 TargetSpawnId 和对应的 Transform，" +
+                 "TargetSpawnId 表示该场景点的，Transform 是位置。")]
         [ListDrawerSettings(ShowIndexLabels = true, DraggableItems = true)]
         private List<SceneSpawnEntry> spawnEntries = new List<SceneSpawnEntry>();
 
