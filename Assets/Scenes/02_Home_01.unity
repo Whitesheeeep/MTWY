@@ -10683,7 +10683,7 @@ MonoBehaviour:
   travelerLayerMask:
     serializedVersion: 2
     m_Bits: 256
-  routeId: 02_Home_01_Door
+  routeId: 01_MainScene_Home
 --- !u!61 &1984189121
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -10999,8 +10999,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 5475128046051554947}
+  m_Children: []
   m_Father: {fileID: 1000000000240541600}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &3698253583505596378
@@ -11032,7 +11031,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3153719709053933182}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7765804800068048366
 GameObject:
@@ -11057,4 +11056,5 @@ SceneRoots:
   - {fileID: 51198621}
   - {fileID: 912759609}
   - {fileID: 886748096}
+  - {fileID: 5475128046051554947}
   - {fileID: 1000000000240541600}

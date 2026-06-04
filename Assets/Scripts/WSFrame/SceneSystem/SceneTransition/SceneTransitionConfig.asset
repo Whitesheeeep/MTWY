@@ -19,3 +19,9 @@ MonoBehaviour:
     targetSpawnId: Door
     resetRigidbodyVelocity: 1
     applySpawnRotation: 0
+  - routeId: 01_MainScene_Home
+    displayName: Home
+    targetSceneName: 01_MainScene
+    targetSpawnId: Home
+    resetRigidbodyVelocity: 0
+    applySpawnRotation: 0

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using WS_Modules.LogModule;
 
 namespace WS_Modules.SceneModule
 {
@@ -159,21 +160,14 @@ namespace WS_Modules.SceneModule
         // 查找当前目标场景中的 SceneSpawnRoot。
         private static SceneSpawnRoot FindSceneSpawnRoot()
         {
-            SceneSpawnRoot[] roots = UnityEngine.Object.FindObjectsOfType<SceneSpawnRoot>(true);
-            if (roots.Length == 0)
+            SceneSpawnRoot root = UnityEngine.Object.FindFirstObjectByType<SceneSpawnRoot>(FindObjectsInactive.Include);
+            if (root == null)
             {
                 throw new InvalidOperationException(
                     $"Scene '{SceneSystem.CurrentSceneName}' does not contain a {nameof(SceneSpawnRoot)}.");
             }
 
-            if (roots.Length > 1)
-            {
-                Debug.LogWarning(
-                    $"Scene '{SceneSystem.CurrentSceneName}' contains multiple {nameof(SceneSpawnRoot)} components. The first one will be used.",
-                    roots[0]);
-            }
-
-            return roots[0];
+            return root;
         }
 
         // 将 traveler 移动到目标出生点，并按 Route 设置处理 Rigidbody2D。
@@ -182,23 +176,7 @@ namespace WS_Modules.SceneModule
             Transform spawnPoint,
             SceneTransitionRoute route)
         {
-            Rigidbody2D rigidbody2D = traveler.GetComponent<Rigidbody2D>();
-            if (rigidbody2D != null)
-            {
-                if (route.ResetRigidbodyVelocity)
-                {
-                    rigidbody2D.velocity = Vector2.zero;
-                    rigidbody2D.angularVelocity = 0f;
-                }
-
-                rigidbody2D.position = spawnPoint.position;
-                if (route.ApplySpawnRotation)
-                {
-                    rigidbody2D.rotation = spawnPoint.eulerAngles.z;
-                }
-
-                return;
-            }
+            WSLog.LogSuccess($"[SceneTransitionSystem] MoveTraveler to {spawnPoint.position}");
 
             traveler.position = spawnPoint.position;
             if (route.ApplySpawnRotation)
