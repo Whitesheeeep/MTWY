@@ -6,6 +6,9 @@ using UnityEngine.Tilemaps;
 
 namespace GameData.Editor
 {
+    /// <summary>
+    /// MapGridBakeSource 的 Inspector 工具，提供图层自动填充和静态地图数据 Bake。
+    /// </summary>
     [CustomEditor(typeof(MapGridBakeSource))]
     public sealed class MapGridBakeSourceEditor : UnityEditor.Editor
     {
@@ -76,9 +79,9 @@ namespace GameData.Editor
 
             Undo.RecordObject(source.outputData, "Bake Map Grid Data");
 
-            string mapId = string.IsNullOrWhiteSpace(source.mapId) ? source.gameObject.scene.name : source.mapId;
+            // mapId 当前约定等于场景名，避免地图 ID 与 SceneSystem 场景名分叉。
+            string mapId = ResolveMapId(source);
             source.outputData.mapId = mapId;
-            source.outputData.sceneName = source.gameObject.scene.name;
             source.outputData.originCell = new Vector3Int(bounds.xMin, bounds.yMin, bounds.zMin);
             source.outputData.width = bounds.size.x;
             source.outputData.height = bounds.size.y;
@@ -96,6 +99,7 @@ namespace GameData.Editor
             combinedBounds = new BoundsInt();
             bool hasBounds = false;
 
+            // 使用所有 affectsBounds 图层的并集作为统一 Grid 范围。
             foreach (MapGridTilemapLayer layer in layers)
             {
                 if (layer == null || layer.tilemap == null || !layer.affectsBounds)
@@ -135,11 +139,7 @@ namespace GameData.Editor
                 return;
             }
 
-            string mapId = string.IsNullOrWhiteSpace(source.mapId) ? source.gameObject.scene.name : source.mapId;
-            if (string.IsNullOrWhiteSpace(mapId))
-            {
-                mapId = source.name;
-            }
+            string mapId = ResolveMapId(source);
 
             const string folderPath = "Assets/Scripts/GameData/Map/SO";
             if (!AssetDatabase.IsValidFolder("Assets/Scripts/GameData/Map/SO"))
@@ -157,6 +157,17 @@ namespace GameData.Editor
             EditorSceneManager.MarkSceneDirty(source.gameObject.scene);
         }
 
+        private static string ResolveMapId(MapGridBakeSource source)
+        {
+            if (!string.IsNullOrWhiteSpace(source.mapId))
+            {
+                return source.mapId;
+            }
+
+            string sceneName = source.gameObject.scene.name;
+            return string.IsNullOrWhiteSpace(sceneName) ? source.name : sceneName;
+        }
+
         private static List<MapGridCellData> BuildCells(List<MapGridTilemapLayer> layers, BoundsInt bounds)
         {
             List<MapGridCellData> cells = new List<MapGridCellData>(bounds.size.x * bounds.size.y);
@@ -167,6 +178,7 @@ namespace GameData.Editor
                     Vector3Int cellPosition = new Vector3Int(x, y, bounds.zMin);
                     MapGridCellFlags flags = MapGridCellFlags.None;
 
+                    // 同一个 cell 可以由多个逻辑 Tilemap 共同贡献 flags。
                     foreach (MapGridTilemapLayer layer in layers)
                     {
                         if (layer == null || layer.tilemap == null || !layer.tilemap.HasTile(cellPosition))

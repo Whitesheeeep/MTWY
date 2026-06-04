@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace GameData
 {
+    /// <summary>
+    /// 地图 Grid 运行时数据库，负责把 MapGridData_SO 转成可 O(1) 查询的一维数组索引。
+    /// </summary>
     public sealed class MapGridDatabase : IMapGridDatabase
     {
         private static readonly Vector3Int[] FourDirections =
@@ -38,6 +41,9 @@ namespace GameData
         public string CurrentMapId => loadedMapData != null ? loadedMapData.mapId : string.Empty;
         public MapGridData_SO CurrentMapData => loadedMapData;
 
+        /// <summary>
+        /// 加载一张静态地图数据，并重建运行时查询索引。
+        /// </summary>
         public void LoadMap(MapGridData_SO mapData)
         {
             if (mapData == null)
@@ -57,6 +63,7 @@ namespace GameData
             cells = new MapGridCellData[width * height];
             runtimeOverrides.Clear();
 
+            // 先填满统一矩形 bounds，保证缺失或旧版本资产不会造成数组空洞。
             for (int gridY = 0; gridY < height; gridY++)
             {
                 for (int gridX = 0; gridX < width; gridX++)
@@ -72,6 +79,7 @@ namespace GameData
                 }
             }
 
+            // 再用 Bake 结果覆盖默认格子。
             foreach (MapGridCellData cellData in mapData.cells)
             {
                 if (!TryGetIndex(cellData.cellPosition, out int index))
@@ -84,6 +92,9 @@ namespace GameData
             }
         }
 
+        /// <summary>
+        /// 卸载当前地图，并清空所有运行时状态。
+        /// </summary>
         public void UnloadCurrentMap()
         {
             loadedMapData = null;
@@ -94,6 +105,9 @@ namespace GameData
             runtimeOverrides.Clear();
         }
 
+        /// <summary>
+        /// 使用当前持有的 MapGridData_SO 重建索引。
+        /// </summary>
         public void ReloadCurrentMap()
         {
             if (loadedMapData == null)
@@ -104,11 +118,17 @@ namespace GameData
             LoadMap(loadedMapData);
         }
 
+        /// <summary>
+        /// 在当前地图中查询格子。
+        /// </summary>
         public bool TryGetCell(Vector3Int cell, out MapGridCellInfo info)
         {
             return TryGetCell(CurrentMapId, cell, out info);
         }
 
+        /// <summary>
+        /// 查询指定地图中的格子。第一版只接受当前地图 ID。
+        /// </summary>
         public bool TryGetCell(string mapId, Vector3Int cell, out MapGridCellInfo info)
         {
             info = new MapGridCellInfo();
@@ -123,21 +143,33 @@ namespace GameData
             return true;
         }
 
+        /// <summary>
+        /// 判断当前地图中的格子是否包含指定属性。
+        /// </summary>
         public bool HasFlag(Vector3Int cell, MapGridCellFlags flag)
         {
             return HasFlag(CurrentMapId, cell, flag);
         }
 
+        /// <summary>
+        /// 判断指定地图中的格子是否包含指定属性。
+        /// </summary>
         public bool HasFlag(string mapId, Vector3Int cell, MapGridCellFlags flag)
         {
             return TryGetCell(mapId, cell, out MapGridCellInfo info) && (info.FinalFlags & flag) == flag;
         }
 
+        /// <summary>
+        /// 判断当前地图中的格子是否可通行。
+        /// </summary>
         public bool IsWalkable(Vector3Int cell)
         {
             return IsWalkable(CurrentMapId, cell);
         }
 
+        /// <summary>
+        /// 判断指定地图中的格子是否可通行。
+        /// </summary>
         public bool IsWalkable(string mapId, Vector3Int cell)
         {
             if (!TryGetCell(mapId, cell, out MapGridCellInfo info))
@@ -150,11 +182,17 @@ namespace GameData
             return (info.FinalFlags & BlockingFlags) == MapGridCellFlags.None;
         }
 
+        /// <summary>
+        /// 获取当前地图中可通行的邻居格子。
+        /// </summary>
         public IEnumerable<Vector3Int> GetNeighbors(Vector3Int cell, bool includeDiagonal = false)
         {
             return GetNeighbors(CurrentMapId, cell, includeDiagonal);
         }
 
+        /// <summary>
+        /// 获取指定地图中可通行的邻居格子。
+        /// </summary>
         public IEnumerable<Vector3Int> GetNeighbors(string mapId, Vector3Int cell, bool includeDiagonal = false)
         {
             Vector3Int[] directions = includeDiagonal ? EightDirections : FourDirections;
@@ -168,6 +206,9 @@ namespace GameData
             }
         }
 
+        /// <summary>
+        /// 设置运行时覆盖。相同 sourceId 在同一 cell 上只保留最新一条。
+        /// </summary>
         public void SetRuntimeOverride(
             string sourceId,
             Vector3Int cell,
@@ -195,6 +236,9 @@ namespace GameData
             overrides.Add(new MapGridRuntimeOverride(sourceId, addFlags, removeFlags));
         }
 
+        /// <summary>
+        /// 清除某个来源在指定 cell 上的覆盖。
+        /// </summary>
         public void ClearRuntimeOverride(string sourceId, Vector3Int cell)
         {
             if (string.IsNullOrWhiteSpace(sourceId) || !runtimeOverrides.TryGetValue(cell, out List<MapGridRuntimeOverride> overrides))
@@ -209,6 +253,9 @@ namespace GameData
             }
         }
 
+        /// <summary>
+        /// 清除某个来源在当前地图所有 cell 上的覆盖。
+        /// </summary>
         public void ClearRuntimeOverrides(string sourceId)
         {
             if (string.IsNullOrWhiteSpace(sourceId))
@@ -242,16 +289,25 @@ namespace GameData
             }
         }
 
+        /// <summary>
+        /// 清除当前地图的全部运行时覆盖。
+        /// </summary>
         public void ClearAllRuntimeOverrides()
         {
             runtimeOverrides.Clear();
         }
 
+        /// <summary>
+        /// GameDatabase 清理入口。
+        /// </summary>
         public void Clear()
         {
             UnloadCurrentMap();
         }
 
+        /// <summary>
+        /// 把 Unity cell 坐标转换成一维数组索引。
+        /// </summary>
         private bool TryGetIndex(Vector3Int cell, out int index)
         {
             int gridX = cell.x - originCell.x;
@@ -266,11 +322,17 @@ namespace GameData
             return true;
         }
 
+        /// <summary>
+        /// 判断查询的地图 ID 是否为当前已加载地图。
+        /// </summary>
         private bool IsCurrentMap(string mapId)
         {
             return loadedMapData != null && string.Equals(loadedMapData.mapId, mapId, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// 将所有运行时覆盖叠加到静态属性上，得到最终查询属性。
+        /// </summary>
         private MapGridCellFlags ApplyRuntimeOverrides(Vector3Int cell, MapGridCellFlags staticFlags)
         {
             if (!runtimeOverrides.TryGetValue(cell, out List<MapGridRuntimeOverride> overrides))
