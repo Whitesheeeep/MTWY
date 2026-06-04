@@ -2,308 +2,262 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8" />
-    <title>UISystem Runtime Windows UI Reference</title>
+    <title>MapGrid SO Viewer Reference</title>
     <style>
         body {
             margin: 0;
-            padding: 24px;
+            font-family: Inter, "Microsoft YaHei", sans-serif;
             background: #1f1f1f;
-            color: #e6e6e6;
-            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            color: #ddd;
         }
 
-        .page {
-            max-width: 1180px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-size: 20px;
-            margin: 0 0 18px;
-        }
-
-        h2 {
-            font-size: 15px;
-            margin: 0 0 10px;
-            color: #f0f0f0;
-        }
-
-        .mock {
-            margin-bottom: 28px;
-            padding: 14px;
+        .window {
+            width: 1180px;
+            height: 760px;
+            margin: 24px auto;
+            border: 1px solid #3a3a3a;
             background: #2b2b2b;
-            border: 1px solid #3d3d3d;
-            border-radius: 6px;
+            display: grid;
+            grid-template-rows: 48px 1fr;
         }
 
         .toolbar {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
+            gap: 12px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #3a3a3a;
+            background: #242424;
         }
 
-        .top {
-            font-weight: 700;
-            color: #d7e8ff;
-        }
-
-        button {
-            height: 26px;
-            padding: 0 12px;
-            color: #eee;
-            background: #3d6bad;
-            border: 0;
+        .field {
+            background: #333;
+            border: 1px solid #555;
             border-radius: 4px;
-            font-weight: 700;
+            padding: 6px 10px;
+            min-width: 260px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .button {
+            background: #3f6fb5;
+            color: white;
+            border-radius: 4px;
+            padding: 6px 12px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 260px 1fr 280px;
+            min-height: 0;
+        }
+
+        .panel {
+            padding: 14px;
+            border-right: 1px solid #3a3a3a;
+            overflow: auto;
+        }
+
+        .right {
+            border-right: 0;
+            border-left: 1px solid #3a3a3a;
+        }
+
+        h3 {
+            margin: 0 0 12px;
+            font-size: 15px;
+            color: #fff;
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 88px 1fr;
+            gap: 6px;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+
+        .label { color: #aaa; }
+        .value { color: #eee; }
+
+        .legend {
+            display: grid;
+            gap: 8px;
             font-size: 13px;
         }
 
-        th {
-            text-align: left;
-            padding: 8px;
-            background: #343434;
-            color: #bfcfe0;
-            border-bottom: 1px solid #4a4a4a;
-        }
-
-        td {
-            padding: 8px;
-            border-bottom: 1px solid #3f3f3f;
-        }
-
-        tr.top-row {
-            background: #263449;
-            border-left: 4px solid #4285db;
-        }
-
-        .badge {
-            display: inline-block;
-            min-width: 58px;
-            padding: 2px 7px;
-            border-radius: 3px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 12px;
-        }
-
-        .visible { background: #275f3a; color: #9ff0b4; }
-        .hidden { background: #4d4d4d; color: #ccc; }
-        .showing { background: #5f5127; color: #ffd37a; }
-        .destroyed { background: #5f2c27; color: #ff9b91; }
-
-        .card-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 10px;
-        }
-
-        .card {
-            padding: 12px;
-            background: #252525;
-            border: 1px solid #3d3d3d;
-            border-radius: 5px;
-        }
-
-        .card.top-card {
-            border-left: 4px solid #4285db;
-            background: #27313f;
-        }
-
-        .card-title {
+        .legend-row {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-weight: 700;
+            align-items: center;
+            gap: 8px;
         }
 
-        .fields {
+        .swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,.25);
+        }
+
+        .grid-wrap {
+            overflow: auto;
+            padding: 24px;
+            background:
+                    linear-gradient(45deg, #252525 25%, transparent 25%),
+                    linear-gradient(-45deg, #252525 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #252525 75%),
+                    linear-gradient(-45deg, transparent 75%, #252525 75%);
+            background-size: 24px 24px;
+            background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+        }
+
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px 12px;
-            font-size: 12px;
+            grid-template-columns: repeat(18, 28px);
+            grid-template-rows: repeat(12, 28px);
+            gap: 2px;
+            width: max-content;
+            transform: scaleY(-1);
         }
 
-        .field-name {
-            color: #aaa;
+        .cell {
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(0,0,0,.45);
+            box-sizing: border-box;
         }
 
-        .split {
+        .none { background: #5a5a5a; }
+        .blocked { background: #c34b4b; }
+        .water { background: #3e7ecb; }
+        .dig { background: #58a65c; }
+        .drop { background: #c4a447; }
+        .furniture { background: #8d62c7; }
+        .npc { background: #d16a3a; }
+
+        .selected {
+            outline: 3px solid #fff;
+            outline-offset: -3px;
+        }
+
+        .warning {
+            padding: 8px;
+            background: #5b421f;
+            border: 1px solid #b58a3f;
+            border-radius: 4px;
+            color: #ffd58a;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .detail-box {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .filter {
             display: grid;
-            grid-template-columns: 1.4fr 0.8fr;
-            gap: 12px;
+            gap: 8px;
+            font-size: 13px;
         }
 
-        .detail {
-            padding: 12px;
-            background: #252525;
-            border: 1px solid #454545;
-            border-radius: 5px;
-        }
-
-        .detail-title {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #d7e8ff;
-        }
-
-        @media (max-width: 860px) {
-            .split {
-                grid-template-columns: 1fr;
-            }
-        }
+        input { vertical-align: middle; }
     </style>
 </head>
-
 <body>
-<div class="page">
-    <h1>UISystem Runtime Windows 显示参考</h1>
+<div class="window">
+    <div class="toolbar">
+        <span>MapGridData_SO</span>
+        <div class="field">MapSceneTemplateMapGridData.asset</div>
+        <div class="button">Focus Selected Cell</div>
+        <div class="button">Reload Preview</div>
+    </div>
 
-    <section class="mock">
-        <h2>方案 A：表格视图，推荐</h2>
-        <div class="toolbar">
-            <span class="top">TopWindow: TestWindow2</span>
-            <button>刷新窗口信息</button>
-        </div>
-
-        <table>
-            <thead>
-            <tr>
-                <th>WindowName</th>
-                <th>State</th>
-                <th>Visible</th>
-                <th>SortingOrder</th>
-                <th>SiblingIndex</th>
-                <th>FullScreen</th>
-                <th>Mask</th>
-                <th>GameObject</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr class="top-row">
-                <td><b>TestWindow2</b> · Top</td>
-                <td><span class="badge visible">Visible</span></td>
-                <td>True</td>
-                <td>300</td>
-                <td>4</td>
-                <td>False</td>
-                <td>True</td>
-                <td>True</td>
-            </tr>
-            <tr>
-                <td>TestWindow</td>
-                <td><span class="badge hidden">Hidden</span></td>
-                <td>False</td>
-                <td>200</td>
-                <td>3</td>
-                <td>False</td>
-                <td>False</td>
-                <td>True</td>
-            </tr>
-            <tr>
-                <td>BagWindow</td>
-                <td><span class="badge showing">Showing</span></td>
-                <td>True</td>
-                <td>100</td>
-                <td>2</td>
-                <td>True</td>
-                <td>False</td>
-                <td>True</td>
-            </tr>
-            </tbody>
-        </table>
-    </section>
-
-    <section class="mock">
-        <h2>方案 B：卡片视图</h2>
-        <div class="toolbar">
-            <span class="top">TopWindow: TestWindow2</span>
-            <button>刷新窗口信息</button>
-        </div>
-
-        <div class="card-list">
-            <div class="card top-card">
-                <div class="card-title">
-                    <span>TestWindow2</span>
-                    <span class="badge visible">Top</span>
-                </div>
-                <div class="fields">
-                    <span class="field-name">State</span><span>Visible</span>
-                    <span class="field-name">SortingOrder</span><span>300</span>
-                    <span class="field-name">SiblingIndex</span><span>4</span>
-                    <span class="field-name">FullScreen</span><span>False</span>
-                    <span class="field-name">HasMask</span><span>True</span>
-                    <span class="field-name">HasGameObject</span><span>True</span>
-                </div>
+    <div class="content">
+        <aside class="panel">
+            <h3>Map Info</h3>
+            <div class="kv">
+                <div class="label">MapId</div><div class="value">MapSceneTemplate</div>
+                <div class="label">Origin</div><div class="value">(-28, -16, 0)</div>
+                <div class="label">Size</div><div class="value">18 x 12</div>
+                <div class="label">CellSize</div><div class="value">(1, 1, 0)</div>
+                <div class="label">Cells</div><div class="value">216</div>
             </div>
 
-            <div class="card">
-                <div class="card-title">
-                    <span>TestWindow</span>
-                    <span class="badge hidden">Hidden</span>
-                </div>
-                <div class="fields">
-                    <span class="field-name">Visible</span><span>False</span>
-                    <span class="field-name">SortingOrder</span><span>200</span>
-                    <span class="field-name">SiblingIndex</span><span>3</span>
-                    <span class="field-name">FullScreen</span><span>False</span>
-                </div>
+            <div class="warning">Warning: 2 cells have multiple flags. Click cells to inspect details.</div>
+
+            <h3>Legend</h3>
+            <div class="legend">
+                <div class="legend-row"><span class="swatch none"></span>None</div>
+                <div class="legend-row"><span class="swatch blocked"></span>Blocked</div>
+                <div class="legend-row"><span class="swatch water"></span>Water</div>
+                <div class="legend-row"><span class="swatch dig"></span>CanDig</div>
+                <div class="legend-row"><span class="swatch drop"></span>CanDropItem</div>
+                <div class="legend-row"><span class="swatch furniture"></span>CanPlaceFurniture</div>
+                <div class="legend-row"><span class="swatch npc"></span>NpcObstacle</div>
             </div>
-        </div>
-    </section>
+        </aside>
 
-    <section class="mock">
-        <h2>方案 C：表格 + 详情</h2>
-        <div class="toolbar">
-            <span class="top">TopWindow: TestWindow2</span>
-            <button>刷新窗口信息</button>
-        </div>
-
-        <div class="split">
-            <table>
-                <thead>
-                <tr>
-                    <th>WindowName</th>
-                    <th>State</th>
-                    <th>Visible</th>
-                    <th>Order</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr class="top-row">
-                    <td><b>TestWindow2</b></td>
-                    <td><span class="badge visible">Visible</span></td>
-                    <td>True</td>
-                    <td>300</td>
-                </tr>
-                <tr>
-                    <td>TestWindow</td>
-                    <td><span class="badge hidden">Hidden</span></td>
-                    <td>False</td>
-                    <td>200</td>
-                </tr>
-                </tbody>
-            </table>
-
-            <div class="detail">
-                <div class="detail-title">TestWindow2 Detail</div>
-                <div class="fields">
-                    <span class="field-name">State</span><span>Visible</span>
-                    <span class="field-name">Visible</span><span>True</span>
-                    <span class="field-name">SortingOrder</span><span>300</span>
-                    <span class="field-name">SiblingIndex</span><span>4</span>
-                    <span class="field-name">FullScreenWindow</span><span>False</span>
-                    <span class="field-name">HasMask</span><span>True</span>
-                    <span class="field-name">HasGameObject</span><span>True</span>
-                </div>
+        <main class="grid-wrap">
+            <div class="grid">
+                <!-- 12 rows x 18 cols, visually flipped by scaleY -->
+                <script>
+                    const types = [
+                        "none","none","none","dig","dig","dig","water","water","water","none","none","furniture","furniture","none","none","blocked","blocked","none",
+                        "none","dig","dig","dig","none","none","water","water","none","none","drop","drop","furniture","none","none","blocked","none","none",
+                        "none","dig","none","none","none","none","none","water","none","drop","drop","none","none","none","blocked","blocked","none","none",
+                        "none","none","none","npc","npc","none","none","none","none","none","none","none","furniture","furniture","none","none","none","none",
+                        "blocked","blocked","none","npc","none","none","dig","dig","dig","none","none","water","water","none","none","drop","drop","none",
+                        "none","blocked","none","none","none","dig","dig","dig","none","none","water","water","water","none","drop","drop","none","none",
+                        "none","none","none","none","none","none","dig","none","none","none","none","water","none","none","none","none","none","none",
+                        "none","furniture","furniture","none","blocked","blocked","none","none","drop","drop","none","none","none","npc","npc","none","none","none",
+                        "none","furniture","none","none","blocked","none","none","drop","drop","none","none","dig","dig","none","npc","none","water","water",
+                        "none","none","none","none","none","none","drop","none","none","none","dig","dig","dig","none","none","none","water","water",
+                        "blocked","blocked","blocked","none","none","none","none","none","none","none","none","dig","none","none","furniture","furniture","none","none",
+                        "none","none","blocked","none","none","water","water","none","none","none","none","none","none","none","furniture","none","none","none"
+                    ];
+                    document.currentScript.outerHTML = types.map((t, i) =>
+                        `<div class="cell ${t} ${i === 103 ? 'selected' : ''}"></div>`
+                    ).join("");
+                </script>
             </div>
-        </div>
-    </section>
+        </main>
+
+        <aside class="panel right">
+            <h3>Selected Cell</h3>
+            <div class="detail-box">
+                CellPosition: <b>(3, 4, 0)</b><br />
+                GridX: <b>31</b><br />
+                GridY: <b>20</b><br />
+                StaticFlags: <b>CanDig | CanDropItem</b><br />
+                Walkable: <b>true</b>
+            </div>
+
+            <br />
+
+            <h3>Filter Highlight</h3>
+            <div class="filter">
+                <label><input type="checkbox" checked /> Blocked</label>
+                <label><input type="checkbox" checked /> Water</label>
+                <label><input type="checkbox" checked /> CanDig</label>
+                <label><input type="checkbox" checked /> CanDropItem</label>
+                <label><input type="checkbox" checked /> CanPlaceFurniture</label>
+                <label><input type="checkbox" checked /> NpcObstacle</label>
+            </div>
+
+            <br />
+
+            <h3>Jump To</h3>
+            <div class="detail-box">
+                Cell X: 3<br />
+                Cell Y: 4<br />
+                <div class="button" style="margin-top:8px;text-align:center;">Jump</div>
+            </div>
+        </aside>
+    </div>
 </div>
 </body>
 </html>
