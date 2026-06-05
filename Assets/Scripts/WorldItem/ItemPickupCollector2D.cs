@@ -1,11 +1,13 @@
 using GameData;
+using Inventory;
 using UnityEngine;
 using WS_Modules.LogModule;
+using WS_Modules.Pooling;
 
-namespace Inventory
+namespace WorldItems
 {
     /// <summary>
-    /// 2D 物品拾取收集器，碰撞到带有 Item 组件的物体时尝试加入背包。
+    /// Collects 2D world Items into Inventory and synchronizes world item records.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ItemPickupCollector2D : MonoBehaviour
@@ -30,7 +32,7 @@ namespace Inventory
             InventoryManager manager = InventoryManager.Instance;
             if (manager == null)
             {
-                Debug.LogError("[ItemPickupCollector2D] 场景中不存在 InventoryManager，无法拾取物品。");
+                Debug.LogError("[ItemPickupCollector2D] Missing InventoryManager, cannot pick up item.");
                 return;
             }
 
@@ -39,19 +41,21 @@ namespace Inventory
             int pickedCount = pickupCount - remaining;
             if (pickedCount <= 0)
             {
-                Debug.Log($"[ItemPickupCollector2D] 背包空间不足，无法拾取 itemId: {item.ItemId}");
+                Debug.Log($"[ItemPickupCollector2D] Inventory has no space for itemId: {item.ItemId}");
                 return;
             }
 
             if (remaining > 0)
             {
                 item.SetCount(remaining);
-                WSLog.LogSuccess($"[ItemPickupCollector2D] 部分拾取 itemId: {item.ItemId}, picked={pickedCount}, remaining={remaining}");
+                WorldItemManager.UpdateRecordFromItem(item);
+                WSLog.LogSuccess($"[ItemPickupCollector2D] Partially picked itemId: {item.ItemId}, picked={pickedCount}, remaining={remaining}");
                 return;
             }
 
-            WSLog.LogSuccess($"[ItemPickupCollector2D] 成功拾取 itemId: {item.ItemId}, count: {pickedCount}");
-            Destroy(item.gameObject);
+            WSLog.LogSuccess($"[ItemPickupCollector2D] Picked itemId: {item.ItemId}, count: {pickedCount}");
+            WorldItemManager.RemoveRecordForItem(item);
+            PoolManager.Instance.Recycle(item.gameObject);
         }
     }
 }
