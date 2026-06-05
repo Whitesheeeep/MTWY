@@ -41,7 +41,7 @@ namespace WS_Modules.Pooling
                 return;
             }
 
-            string key = prefab.name;
+            string key = prefab.GetComponent<PoolObjectIdentity>()? prefab.GetComponent<PoolObjectIdentity>().PoolKey : prefab.name;
             if (!CheckPrewarmValid(key, initCount, maxCapacity)) return;
             // 如果池子不存在，先创建一个新的池子
             if (!PoolDic.TryGetValue(key, out var poolData))

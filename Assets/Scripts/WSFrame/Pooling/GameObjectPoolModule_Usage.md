@@ -55,6 +55,14 @@ PoolManager.Instance.Prewarm("TestFolder/Cube1", 5, 10);
 
 首次通过 `Get` 创建的池默认是无限容量。如果某个池需要固定容量，应先调用 `Prewarm`，再使用 `Get`。
 
+当调用方已经持有可作为模板的 `GameObject`，并且不希望通过资源 key 加载时，也可以直接传入 `GameObject` 预热：
+
+```csharp
+PoolManager.Instance.Prewarm(prefabGameObject, 5, 10);
+```
+
+该重载会使用 `prefabGameObject.name` 作为池 key。传入的 `prefabGameObject` 会被标记 `PoolObjectIdentity` 并作为第一个对象放入池中，剩余对象通过 `Instantiate(prefabGameObject, poolRootTransform, false)` 补足到 `initCount`。`initCount` 和 `maxCapacity` 的校验规则与按 key 预热一致。
+
 ### 异步预热
 
 ```csharp
@@ -298,5 +306,6 @@ PoolManager.Instance.ClearAll();
 - 高频使用的对象建议在初始化阶段全局预热。
 - 只在某个玩法或界面中使用的对象，建议进入对应流程时调用运行时 `Prewarm`。
 - 需要容量限制的 GameObject 池必须先预热，否则首次 `Get` 创建的池默认无限容量。
+- 已经持有模板对象且不需要资源加载时，可以使用 `PoolManager.Instance.Prewarm(GameObject, initCount, maxCapacity)`；否则优先使用资源 key 预热。
 - GameObject 回收优先使用 `Recycle(GameObject)`，让 `PoolObjectIdentity` 自动定位池。
 - Class 池对象如果有状态，建议实现 `IPoolable` 并在 `OnSpawn` / `OnDespawn` 中重置。

@@ -39,6 +39,7 @@ namespace WS_Modules.Pooling
 
         #region Prewarm
         public void Prewarm(string key, int initCount, int maxCapacity) => _gameObjectPoolModule.Prewarm(key, initCount, maxCapacity);
+        public void Prewarm(GameObject prefab, int initCount, int maxCapacity) => _gameObjectPoolModule.Prewarm(prefab, initCount, maxCapacity);
 
         public void PrewarmClass<T>(int count, int maxCapacity) where T : class, new() => _classPoolModule.Prewarm<T>(count, maxCapacity);
 
