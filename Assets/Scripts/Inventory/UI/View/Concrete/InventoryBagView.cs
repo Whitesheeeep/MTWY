@@ -17,7 +17,6 @@ namespace WS_Modules.UIModule
         [SerializeField] private RectTransform edgeScrollDeadZoneArea;
         [SerializeField] private InventoryManualGridLayout manualLayout = InventoryManualGridLayout.CreateDefault();
         [SerializeField] private InventoryDragEdgeScrollController dragEdgeScroll;
-        [SerializeField] private int visibleSlotCount = 30;
         private InventoryVirtualizedSlotViewLayout virtualizedLayout = new InventoryVirtualizedSlotViewLayout();
 
         private Vector2 lastDragEdgeScrollScreenPosition;
@@ -27,8 +26,6 @@ namespace WS_Modules.UIModule
 
         #region Properties
         /// <inheritdoc />
-        public override int VisibleSlotCount => Mathf.Max(0, visibleSlotCount);
-        /// <inheritdoc />
         protected override IInventorySlotViewLayout SlotLayout => virtualizedLayout;
         #endregion
 
@@ -37,12 +34,6 @@ namespace WS_Modules.UIModule
         /// 设置背包窗口运行时显示槽位数量。
         /// </summary>
         /// <param name="slotCount">目标显示槽位数量，小于 0 时按 0 处理。</param>
-        public override void SetVisibleSlotCount(int slotCount)
-        {
-            visibleSlotCount = Mathf.Max(0, slotCount);
-            base.SetVisibleSlotCount(visibleSlotCount);
-        }
-
         /// <summary>
         /// 开始检测拖拽边缘滚动。
         /// </summary>
@@ -108,18 +99,12 @@ namespace WS_Modules.UIModule
         #endregion
 
         #region Layout
-        protected override int GetVisibleSlotCountFromViewModel()
-        {
-            return ViewModel != null ? ViewModel.UnlockedSlotCount : VisibleSlotCount;
-        }
-
         protected override void ConfigureLayout()
         {
             EnsureReferences();
             RegisterScrollEvent();
             base.ConfigureLayout();
             virtualizedLayout.SetScrollContext(scrollRect, contentRoot, manualLayout);
-            virtualizedLayout.SetMaxActiveSlotCount(VisibleSlotCount);
         }
 
         private bool EnsureReferences()

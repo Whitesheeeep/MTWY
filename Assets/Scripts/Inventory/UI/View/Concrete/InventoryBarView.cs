@@ -20,7 +20,7 @@ namespace WS_Modules.UIModule
 
         #region Properties
         /// <inheritdoc />
-        public override int VisibleSlotCount => Mathf.Max(0, visibleSlotCount);
+        public int VisibleSlotCount => Mathf.Max(0, visibleSlotCount);
 
         /// <inheritdoc />
         protected override IInventorySlotViewLayout SlotLayout => fixedLayout;
@@ -31,10 +31,11 @@ namespace WS_Modules.UIModule
         /// 设置快捷栏运行时显示槽位数量。
         /// </summary>
         /// <param name="slotCount">目标显示槽位数量，小于 0 时按 0 处理。</param>
-        public override void SetVisibleSlotCount(int slotCount)
+        public void SetVisibleSlotCount(int slotCount)
         {
             visibleSlotCount = Mathf.Max(0, slotCount);
-            base.SetVisibleSlotCount(visibleSlotCount);
+            ConfigureLayout();
+            fixedLayout.SetSlotCount(visibleSlotCount);
         }
         #endregion
 
@@ -50,11 +51,6 @@ namespace WS_Modules.UIModule
         {
             EnsureReferences();
             base.ConfigureLayout();
-        }
-
-        protected override int GetVisibleSlotCountFromViewModel()
-        {
-            return ViewModel?.Slots.Count ?? VisibleSlotCount;
         }
 
         private void EnsureReferences()
@@ -151,7 +147,7 @@ namespace WS_Modules.UIModule
             }
 
             ConfigureLayout();
-            fixedLayout.SetVisibleSlotCount(targetCount);
+            fixedLayout.SetSlotCount(targetCount);
             if (changed) EditorUtility.SetDirty(this);
         }
 

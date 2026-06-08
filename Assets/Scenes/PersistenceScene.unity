@@ -165,7 +165,7 @@ Transform:
   m_GameObject: {fileID: 139756979}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.91, y: -2.86, z: 0}
+  m_LocalPosition: {x: 32.7, y: -19.1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -464,7 +464,7 @@ Transform:
   m_GameObject: {fileID: 261606864}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.91, y: -2.0700002, z: -10}
+  m_LocalPosition: {x: 32.7, y: -18.31, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -534,6 +534,7 @@ GameObject:
   m_Component:
   - component: {fileID: 382742699}
   - component: {fileID: 382742700}
+  - component: {fileID: 382742701}
   m_Layer: 0
   m_Name: WorldItemManager
   m_TagString: Untagged
@@ -550,7 +551,7 @@ Transform:
   m_GameObject: {fileID: 382742698}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -53.199722, y: -0.8574053, z: -1.5315729}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -577,6 +578,18 @@ MonoBehaviour:
     dropDistance: 2
   prewarmCount: 8
   maxPoolCapacity: 64
+--- !u!114 &382742701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382742698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6dfbf51c96b487ea90ac2db6547c31f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &410271451
 GameObject:
   m_ObjectHideFlags: 0
@@ -1698,7 +1711,7 @@ Transform:
   m_GameObject: {fileID: 2023357687}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.91, y: -2.0700002, z: -10}
+  m_LocalPosition: {x: 32.7, y: -18.31, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1750,7 +1763,7 @@ MonoBehaviour:
   persistenceSceneName: PersistenceScene
   boundsTag: BoundPrefiner
   boundsObjectName: Bounds
-  bindOnStart: 1
+  bindOnStart: 0
   clearWhenNotFound: 0
 --- !u!1 &2065780187
 GameObject:
@@ -1989,6 +2002,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c111e19c3b2a4064b46df66a96fe6c2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  firstAddtiveSceneName: 01_MainScene
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

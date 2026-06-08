@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="True">
+    <ui:VisualElement class="report-row">
+        <ui:Label name="SeverityLabel" class="row-severity" />
+        <ui:Label name="CellLabel" class="row-cell" />
+        <ui:Label name="MessageLabel" class="row-message" />
+    </ui:VisualElement>
+</ui:UXML>

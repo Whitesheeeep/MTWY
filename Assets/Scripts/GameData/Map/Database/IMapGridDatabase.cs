@@ -19,9 +19,19 @@ namespace GameData
         MapGridData_SO CurrentMapData { get; }
 
         /// <summary>
+        /// 当前已加载地图对应的场景 Grid。未加载时为空。
+        /// </summary>
+        Grid CurrentGrid { get; }
+
+        /// <summary>
+        /// 当前是否持有可用于世界坐标转换的 Grid。
+        /// </summary>
+        bool HasCurrentGrid { get; }
+
+        /// <summary>
         /// 加载地图数据并重建运行时索引，同时清空 runtime overrides。
         /// </summary>
-        void LoadMap(MapGridData_SO mapData);
+        void LoadMap(MapGridData_SO mapData, Grid grid);
 
         /// <summary>
         /// 卸载当前地图并清空索引和 runtime overrides。
@@ -32,6 +42,16 @@ namespace GameData
         /// 使用当前 MapGridData_SO 重新构建运行时索引。
         /// </summary>
         void ReloadCurrentMap();
+
+        /// <summary>
+        /// 将 cell 坐标转换为当前 Grid 中的世界中心点。
+        /// </summary>
+        Vector3 GetCellCenterWorld(Vector3Int cell);
+
+        /// <summary>
+        /// 将世界坐标转换为当前 Grid 中的 cell 坐标。
+        /// </summary>
+        Vector3Int WorldToCell(Vector3 worldPosition);
 
         /// <summary>
         /// 在当前地图中查询 cell。

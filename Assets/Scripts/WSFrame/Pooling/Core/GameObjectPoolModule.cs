@@ -41,28 +41,15 @@ namespace WS_Modules.Pooling
                 return;
             }
 
-            string key = prefab.GetComponent<PoolObjectIdentity>()? prefab.GetComponent<PoolObjectIdentity>().PoolKey : prefab.name;
+            string key = prefab.name;
             if (!CheckPrewarmValid(key, initCount, maxCapacity)) return;
-            // 如果池子不存在，先创建一个新的池子
-            if (!PoolDic.TryGetValue(key, out var poolData))
-            {
-                poolData = new GameObjectPoolData(poolRootTransform, maxCapacity, $"Pool_{key}");
-                PoolDic[key] = poolData;
-            }
 
-            // 将传入的预制体实例准备为可回收状态并放入池中，确保预热时至少有一个对象实例可用，同时避免重复加载资源
-            MarkObjectIdentity(prefab, key);
-            PrepareForRecycle(prefab);
-            poolData.PushObj(prefab);
-            // 预热时直接使用传入的预制体实例来创建对象，避免重复加载资源
-            for (int i = 0; i < initCount - 1; i++)
-            {
-                var inst = GameObject.Instantiate(prefab, poolRootTransform, false);
-                inst.name = prefab.name;
-                MarkObjectIdentity(inst, key);
-                PrepareForRecycle(inst);
-                poolData.PushObj(inst);
-            }
+            var poolData = GetOrCreatePrewarmPool(key, maxCapacity);
+            int needed = initCount - poolData.Count;
+            if (needed <= 0) return;
+
+            // 预热时直接使用传入的预制体实例作为第一个对象，避免重复加载资源。
+            PrewarmObjects(poolData, key, prefab, needed, false);
         }
 
         /// <summary>
@@ -76,12 +63,9 @@ namespace WS_Modules.Pooling
         {
             if (!CheckPrewarmValid(key, initCount, maxCapacity)) return;
 
-            // 如果池子不存在，先创建一个新的池子
-            if (!PoolDic.TryGetValue(key, out var poolData))
-            {
-                poolData = new GameObjectPoolData(poolRootTransform, maxCapacity, $"Pool_{key}");
-                PoolDic[key] = poolData;
-            }
+            var poolData = GetOrCreatePrewarmPool(key, maxCapacity);
+            int needed = initCount - poolData.Count;
+            if (needed <= 0) return;
 
             var prefab = gameObjectResLoader.Load<GameObject>(key);
             if (prefab == null)
@@ -90,14 +74,7 @@ namespace WS_Modules.Pooling
                 return;
             }
 
-            for (int i = 0; i < initCount; i++)
-            {
-                var inst = GameObject.Instantiate(prefab, poolRootTransform, false);
-                inst.name = prefab.name;
-                MarkObjectIdentity(inst, key);
-                PrepareForRecycle(inst);
-                poolData.PushObj(inst);
-            }
+            PrewarmObjects(poolData, key, prefab, needed, false);
         }
 
         /// <summary>
@@ -118,27 +95,23 @@ namespace WS_Modules.Pooling
                 return;
             }
 
-            if (!PoolDic.TryGetValue(key, out var data))
+            var data = GetOrCreatePrewarmPool(key, maxCapacity);
+            int needed = initCount - data.Count;
+            if (needed <= 0)
             {
-                data = new GameObjectPoolData(poolRootTransform, maxCapacity, $"Pool_{key}");
-                PoolDic[key] = data;
+                onComplete?.Invoke(true);
+                return;
             }
 
             var prefab = await gameObjectResLoader.LoadAsync<GameObject>(key);
             if (prefab == null)
             {
                 WSLog.LogWarning($"PrewarmAsync: no prefab found for key '{key}'.");
+                onComplete?.Invoke(false);
                 return;
             }
 
-            for (int i = 0; i < initCount; i++)
-            {
-                var inst = GameObject.Instantiate(prefab, poolRootTransform, false);
-                inst.name = prefab.name;
-                MarkObjectIdentity(inst, key);
-                PrepareForRecycle(inst);
-                data.PushObj(inst);
-            }
+            PrewarmObjects(data, key, prefab, needed, false);
 
             onComplete?.Invoke(true);
         }
@@ -403,6 +376,47 @@ namespace WS_Modules.Pooling
             }
 
             PoolDic.Clear();
+        }
+
+        private GameObjectPoolData GetOrCreatePrewarmPool(string key, int maxCapacity)
+        {
+            if (!PoolDic.TryGetValue(key, out var poolData))
+            {
+                poolData = new GameObjectPoolData(poolRootTransform, maxCapacity, $"Pool_{key}");
+                PoolDic[key] = poolData;
+                return poolData;
+            }
+
+            poolData.EnsureMaxCapacity(maxCapacity);
+            return poolData;
+        }
+
+        private void PrewarmObjects(
+            GameObjectPoolData poolData,
+            string key,
+            GameObject prefab,
+            int count,
+            bool usePrefabAsFirst)
+        {
+            if (poolData == null || prefab == null || count <= 0) return;
+
+            int startIndex = 0;
+            if (usePrefabAsFirst)
+            {
+                MarkObjectIdentity(prefab, key);
+                PrepareForRecycle(prefab);
+                poolData.PushObj(prefab);
+                startIndex = 1;
+            }
+
+            for (int i = startIndex; i < count; i++)
+            {
+                var inst = GameObject.Instantiate(prefab, poolRootTransform, false);
+                inst.name = prefab.name;
+                MarkObjectIdentity(inst, key);
+                PrepareForRecycle(inst);
+                poolData.PushObj(inst);
+            }
         }
 
         #region 该类的合理性检验

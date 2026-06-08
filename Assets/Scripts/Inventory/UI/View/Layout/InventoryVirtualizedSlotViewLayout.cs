@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using WS_Modules.Pooling;
 
 namespace WS_Modules.UIModule
 {
@@ -24,14 +25,9 @@ namespace WS_Modules.UIModule
         private InventoryManualGridLayout manualLayout;
         private IReadOnlyList<InventorySlotViewData> currentSlotDataList;
         private InventoryVisibleIndexRange currentVisibleRange = InventoryVisibleIndexRange.Empty;
-        private int visibleSlotCount;
-        private int maxActiveSlotCount;
         private int currentSelectedSlotIndex = -1;
-        #endregion
-
-        #region Properties
-        /// <inheritdoc />
-        public int VisibleSlotCount => Mathf.Max(0, visibleSlotCount);
+        private string slotPoolKey;
+        private bool fallbackWarningLogged;
         #endregion
 
         #region Public Methods
@@ -41,6 +37,12 @@ namespace WS_Modules.UIModule
             Transform slotRoot,
             InventorySlotViewEventModule eventModule)
         {
+            if (this.slotPrefab != slotPrefab)
+            {
+                slotPoolKey = null;
+                fallbackWarningLogged = false;
+            }
+
             this.slotPrefab = slotPrefab;
             this.slotRoot = slotRoot;
             this.eventModule = eventModule;
@@ -64,19 +66,6 @@ namespace WS_Modules.UIModule
         /// 设置当前 View 最多实例化的可见槽位数量。
         /// </summary>
         /// <param name="count">最大实例化槽位数量，小于 0 时按 0 处理。</param>
-        public void SetMaxActiveSlotCount(int count)
-        {
-            maxActiveSlotCount = Mathf.Max(0, count);
-            RefreshVisibleSlots();
-        }
-
-        /// <inheritdoc />
-        public void SetVisibleSlotCount(int count)
-        {
-            visibleSlotCount = Mathf.Max(0, count);
-            RefreshVisibleSlots();
-        }
-
         /// <inheritdoc />
         public void RefreshSlot(int index, InventorySlotViewData data, bool selected)
         {
@@ -132,13 +121,13 @@ namespace WS_Modules.UIModule
         {
             if (!EnsureReferences()) return;
 
-            ApplyContentHeight();
+            int slotCount = GetCurrentSlotCount();
+            ApplyContentHeight(slotCount);
             InventoryVisibleIndexRange nextRange = scrollCalculator.CalculateVisibleRange(
-                VisibleSlotCount,
+                slotCount,
                 scrollRect,
                 contentRoot,
                 manualLayout);
-            nextRange = ClampRangeByMaxActiveSlotCount(nextRange);
             if (!forceRefresh && IsSameRange(nextRange, currentVisibleRange)) return;
 
             currentVisibleRange = nextRange;
@@ -152,9 +141,12 @@ namespace WS_Modules.UIModule
             for (int i = 0; i < recycleIndexBuffer.Count; i++)
                 RemoveSlot(recycleIndexBuffer[i]);
 
+            PrepareSlotPool(GetRequiredSlotCount(nextRange));
             for (int i = nextRange.StartIndex; i <= nextRange.EndIndex; i++)
             {
                 InventorySlotView slot = EnsureSlot(i);
+                if (slot == null) continue;
+
                 PositionSlot(i, slot);
                 slot.Refresh(GetSlotData(currentSlotDataList, i), i == currentSelectedSlotIndex);
             }
@@ -165,10 +157,21 @@ namespace WS_Modules.UIModule
         private bool EnsureReferences()
         {
             if (contentRoot != null) slotRoot = contentRoot;
-            if (slotPrefab != null && slotRoot != null && scrollRect != null && contentRoot != null) return true;
+            if (slotPrefab != null && slotRoot != null && scrollRect != null && contentRoot != null)
+            {
+                return true;
+            }
 
             Debug.LogWarning("[InventoryVirtualizedSlotViewLayout] 缺少 ScrollRect、Content 或槽位预制体，无法刷新槽位。");
             return false;
+        }
+
+        private void PrepareSlotPool(int targetAvailableCount)
+        {
+            if (slotPrefab == null || targetAvailableCount <= 0) return;
+
+            EnsureSlotPoolKey();
+            PoolManager.Instance.Prewarm(slotPrefab.gameObject, targetAvailableCount, -1);
         }
 
         private InventorySlotView EnsureSlot(int index)
@@ -180,12 +183,40 @@ namespace WS_Modules.UIModule
                 return slot;
             }
 
-            slot = UnityEngine.Object.Instantiate(slotPrefab, contentRoot);
-            slot.gameObject.name = $"BagItem ({index + 1})";
+            slot = GetSlotFromPool();
+            if (slot == null) slot = CreateFallbackSlot();
+            if (slot == null) return null;
+
             InitializeSlot(slot, index);
             slot.gameObject.SetActive(true);
             activeSlots[index] = slot;
             return slot;
+        }
+
+        private InventorySlotView GetSlotFromPool()
+        {
+            EnsureSlotPoolKey();
+            if (string.IsNullOrEmpty(slotPoolKey)) return null;
+
+            GameObject slotObject = PoolManager.Instance.Get(slotPoolKey, contentRoot);
+            if (slotObject == null) return null;
+
+            InventorySlotView slot = slotObject.GetComponent<InventorySlotView>();
+            if (slot != null) return slot;
+
+            PoolManager.Instance.Recycle(slotPoolKey, slotObject);
+            return null;
+        }
+
+        private InventorySlotView CreateFallbackSlot()
+        {
+            if (!fallbackWarningLogged)
+            {
+                Debug.LogWarning("[InventoryVirtualizedSlotViewLayout] 对象池未能提供槽位实例，已退化为直接实例化。");
+                fallbackWarningLogged = true;
+            }
+
+            return UnityEngine.Object.Instantiate(slotPrefab, contentRoot);
         }
 
         private void InitializeSlot(InventorySlotView slot, int index)
@@ -198,7 +229,7 @@ namespace WS_Modules.UIModule
             if (!activeSlots.TryGetValue(index, out InventorySlotView slot)) return;
 
             activeSlots.Remove(index);
-            if (slot != null) UnityEngine.Object.Destroy(slot.gameObject);
+            RecycleSlot(slot);
         }
 
         private void RecycleAllSlots()
@@ -210,13 +241,35 @@ namespace WS_Modules.UIModule
             for (int i = 0; i < recycleIndexBuffer.Count; i++)
                 RemoveSlot(recycleIndexBuffer[i]);
         }
+
+        private void RecycleSlot(InventorySlotView slot)
+        {
+            if (slot == null) return;
+
+            slot.ClearDropPreview();
+            slot.Clear();
+            if (string.IsNullOrEmpty(slotPoolKey))
+            {
+                slot.gameObject.SetActive(false);
+                return;
+            }
+
+            PoolManager.Instance.Recycle(slotPoolKey, slot.gameObject);
+        }
+
+        private void EnsureSlotPoolKey()
+        {
+            if (!string.IsNullOrEmpty(slotPoolKey) || slotPrefab == null) return;
+
+            slotPoolKey = slotPrefab.gameObject.name;
+        }
         #endregion
 
         #region Layout
-        private void ApplyContentHeight()
+        private void ApplyContentHeight(int slotCount)
         {
             RectTransform viewport = GetViewport();
-            float contentHeight = scrollCalculator.CalculateContentHeight(VisibleSlotCount, manualLayout, viewport);
+            float contentHeight = scrollCalculator.CalculateContentHeight(slotCount, manualLayout, viewport);
             contentRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
         }
 
@@ -230,7 +283,7 @@ namespace WS_Modules.UIModule
             slotRect.anchorMax = new Vector2(0f, 1f);
             slotRect.pivot = new Vector2(0f, 1f);
             slotRect.sizeDelta = manualLayout.SlotSize;
-            slotRect.anchoredPosition = scrollCalculator.CalculateSlotPosition(index, manualLayout, viewport, VisibleSlotCount);
+            slotRect.anchoredPosition = scrollCalculator.CalculateSlotPosition(index, manualLayout, viewport, GetCurrentSlotCount());
         }
 
         private void CollectRecycleIndices(InventoryVisibleIndexRange nextRange)
@@ -256,17 +309,22 @@ namespace WS_Modules.UIModule
             return dataList[index];
         }
 
+        private int GetCurrentSlotCount()
+        {
+            return currentSlotDataList?.Count ?? 0;
+        }
+
+        private int GetRequiredSlotCount(InventoryVisibleIndexRange range)
+        {
+            if (!range.IsValid) return 0;
+
+            int rangeSlotCount = range.EndIndex - range.StartIndex + 1;
+            return Mathf.Max(0, rangeSlotCount - activeSlots.Count);
+        }
+
         private static bool IsSameRange(InventoryVisibleIndexRange left, InventoryVisibleIndexRange right)
         {
             return left.StartIndex == right.StartIndex && left.EndIndex == right.EndIndex;
-        }
-
-        private InventoryVisibleIndexRange ClampRangeByMaxActiveSlotCount(InventoryVisibleIndexRange range)
-        {
-            if (!range.IsValid || maxActiveSlotCount <= 0) return InventoryVisibleIndexRange.Empty;
-
-            int endIndex = Mathf.Min(range.EndIndex, range.StartIndex + maxActiveSlotCount - 1);
-            return new InventoryVisibleIndexRange(range.StartIndex, endIndex);
         }
         #endregion
     }

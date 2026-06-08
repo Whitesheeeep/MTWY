@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2488924093902201980}
   - component: {fileID: 1766945617760612631}
   - component: {fileID: 3056739511811439954}
+  - component: {fileID: 2307320051998643070}
   m_Layer: 5
   m_Name: BarItem
   m_TagString: Untagged
@@ -36,11 +37,11 @@ RectTransform:
   - {fileID: 3080882980024050037}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 22, y: 22}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0, y: 1}
 --- !u!114 &1766945617760612631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -101,6 +102,19 @@ MonoBehaviour:
   itemIcon: {fileID: 6953108069557092944}
   itemCount: {fileID: 4405729316198379360}
   chosenIcon: {fileID: 6296764640821475790}
+--- !u!114 &2307320051998643070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 915930178497077476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c111a7fefea640488e604f5690c8e8e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PoolKey: BarItem
 --- !u!1 &3549140086360366721
 GameObject:
   m_ObjectHideFlags: 0
@@ -118,7 +132,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &3080882980024050037
 RectTransform:
   m_ObjectHideFlags: 0
@@ -166,7 +180,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 99
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e248e2898ca7b5e4bb83db1a8fd61afc, type: 2}
   m_sharedMaterial: {fileID: 3305084184866456468, guid: e248e2898ca7b5e4bb83db1a8fd61afc, type: 2}

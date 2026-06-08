@@ -15,6 +15,8 @@ namespace WorldItems
         private static readonly Dictionary<string, WorldItemSceneBucket> bucketsByMapId =
             new Dictionary<string, WorldItemSceneBucket>();
 
+        public static Dictionary<string, WorldItemSceneBucket> BucketsByMapId => bucketsByMapId;
+
         private static int nextInstanceId;
 
         /// <summary>
@@ -75,14 +77,22 @@ namespace WorldItems
         /// </summary>
         public static bool BindRecordToItem(Item item, int instanceId)
         {
+            return BindRecordToItem(item, instanceId, GetCurrentMapId());
+        }
+
+        /// <summary>
+        /// 将指定地图中已存在的数据记录绑定到重建出来的可见 Item 上，不创建新记录。
+        /// </summary>
+        public static bool BindRecordToItem(Item item, int instanceId, string mapId)
+        {
             if (item == null || instanceId <= 0)
             {
                 return false;
             }
 
-            if (!GetCurrentBucket().Contains(instanceId))
+            if (!GetBucket(mapId).Contains(instanceId))
             {
-                Debug.LogWarning($"[WorldItemManager] Cannot bind missing world item record instanceId={instanceId}.");
+                Debug.LogWarning($"[WorldItemManager] Cannot bind missing world item record mapId={mapId}, instanceId={instanceId}.");
                 return false;
             }
 

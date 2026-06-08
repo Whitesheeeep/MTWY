@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -12,6 +13,8 @@ namespace GameData.Editor
     [CustomEditor(typeof(MapGridBakeSource))]
     public sealed class MapGridBakeSourceEditor : UnityEditor.Editor
     {
+        const string FOLDER_PATH = "Assets/Scripts/GameData/Map/SO";
+        private const string FOLDER_NAME = "SO";
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
@@ -57,6 +60,7 @@ namespace GameData.Editor
 
         private static void Bake(MapGridBakeSource source)
         {
+            // 创建对应的 SO 资源文件
             EnsureOutputData(source);
 
             if (source.outputData == null)
@@ -141,13 +145,12 @@ namespace GameData.Editor
 
             string mapId = ResolveMapId(source);
 
-            const string folderPath = "Assets/Scripts/GameData/Map/SO";
-            if (!AssetDatabase.IsValidFolder("Assets/Scripts/GameData/Map/SO"))
+            if (!AssetDatabase.IsValidFolder(FOLDER_PATH))
             {
-                AssetDatabase.CreateFolder("Assets/Scripts/GameData/Map", "SO");
+                AssetDatabase.CreateFolder(Path.GetDirectoryName(FOLDER_PATH), FOLDER_NAME);
             }
 
-            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folderPath}/{mapId}MapGridData.asset");
+            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{FOLDER_PATH}/{mapId}MapGridData.asset");
             MapGridData_SO data = ScriptableObject.CreateInstance<MapGridData_SO>();
             AssetDatabase.CreateAsset(data, assetPath);
 

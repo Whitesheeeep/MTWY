@@ -48,12 +48,14 @@ PoolManager.Instance.Prewarm("TestFolder/Cube1", 5, 10);
 参数含义：
 
 - `key`：资源加载 key。
-- `initCount`：初始化时创建并放入池中的对象数量，必须大于 0。
+- `initCount`：预热后希望池中至少保留的可用对象数量，必须大于 0。
 - `maxCapacity`：池最大容量，`-1` 表示不限容量。
 
 如果 `initCount > maxCapacity` 且 `maxCapacity != -1`，预热会被判定为无效。
 
 首次通过 `Get` 创建的池默认是无限容量。如果某个池需要固定容量，应先调用 `Prewarm`，再使用 `Get`。
+
+`Prewarm` 是补足到目标数量，而不是每次追加 `initCount` 个对象。重复预热同一个池时，如果池中可用对象数量已经达到 `initCount`，会直接跳过；如果不足，只会创建缺少的数量。已有池的容量只会扩大，不会因为后续传入更小的 `maxCapacity` 而缩小。
 
 当调用方已经持有可作为模板的 `GameObject`，并且不希望通过资源 key 加载时，也可以直接传入 `GameObject` 预热：
 
@@ -61,7 +63,7 @@ PoolManager.Instance.Prewarm("TestFolder/Cube1", 5, 10);
 PoolManager.Instance.Prewarm(prefabGameObject, 5, 10);
 ```
 
-该重载会使用 `prefabGameObject.name` 作为池 key。传入的 `prefabGameObject` 会被标记 `PoolObjectIdentity` 并作为第一个对象放入池中，剩余对象通过 `Instantiate(prefabGameObject, poolRootTransform, false)` 补足到 `initCount`。`initCount` 和 `maxCapacity` 的校验规则与按 key 预热一致。
+该重载会优先使用 `PoolObjectIdentity.PoolKey` 作为池 key，没有标记时使用 `prefabGameObject.name`。需要补充对象时，传入的 `prefabGameObject` 会被标记 `PoolObjectIdentity` 并作为第一个对象放入池中，剩余对象通过 `Instantiate(prefabGameObject, poolRootTransform, false)` 补足到 `initCount`。如果已有可用对象数量已经满足 `initCount`，不会重复把同一个 `GameObject` 放入池中。`initCount` 和 `maxCapacity` 的校验规则与按 key 预热一致。
 
 ### 异步预热
 

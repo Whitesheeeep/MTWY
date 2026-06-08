@@ -13,6 +13,11 @@ namespace GameData
         [SerializeField] private MapGridData_SO mapGridData;
 
         /// <summary>
+        /// 当前地图场景使用的 Grid。需要在 Inspector 中手动拖拽。
+        /// </summary>
+        [SerializeField] private Grid grid;
+
+        /// <summary>
         /// 场景启用时加载地图数据。
         /// </summary>
         private void OnEnable()
@@ -23,7 +28,13 @@ namespace GameData
                 return;
             }
 
-            GameDatabase.Get<IMapGridDatabase>().LoadMap(mapGridData);
+            if (grid == null)
+            {
+                Debug.LogError($"[MapGridRuntimeLoader] Grid is not assigned on {name}.");
+                return;
+            }
+
+            GameDatabase.Get<IMapGridDatabase>().LoadMap(mapGridData, grid);
         }
 
         /// <summary>

@@ -439,7 +439,7 @@ MonoBehaviour:
     enabled: 1
     maxScrollSpeed: 240
     deadZone: 2
-  visibleSlotCount: 50
+  visibleSlotCount: 10
 --- !u!1 &3709414758411579557
 GameObject:
   m_ObjectHideFlags: 0
@@ -1653,6 +1653,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f85dec5472ee45141a14b59b6a153479, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsFullWindow: 0
+  DoAnimation: 1
   BagContentBlockInventoryBagView: {fileID: 5940981084880655743}
   HeadIconImage: {fileID: 4746773818525367296}
   NumsTMP_Text: {fileID: 5883753026465907589}

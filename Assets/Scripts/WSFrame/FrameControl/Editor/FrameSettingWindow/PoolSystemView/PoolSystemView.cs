@@ -10,6 +10,7 @@ namespace WS_Modules
     internal sealed class PoolSystemView
     {
         private const string CachedTooltip = "对象池内当前未被取出，可直接复用的空闲对象数量。";
+        public const string CachedStateTooltip = "池子使用状态：OK 表示池子健康，余量多；Open 表示无限池；High 表示池子快满了；Full 表示池子已满，无法再放入更多对象。";
 
         private readonly Func<VisualElement, WSFrameRoot> _getFrameRoot;
         private readonly IPoolStatsService _poolStatsService = new PoolStatsService();
@@ -254,9 +255,17 @@ namespace WS_Modules
 
         private static void BindStateColumn(Column column, Func<IList<PoolRowViewData>> getRows)
         {
+            column.makeHeader = () =>
+            {
+                var label = new Label("State");
+                label.tooltip = CachedStateTooltip;
+                label.AddToClassList("pool-header-state");
+                return label;
+            };
             column.makeCell = () =>
             {
                 var label = new Label();
+                label.tooltip = CachedStateTooltip;
                 label.AddToClassList("pool-state");
                 return label;
             };

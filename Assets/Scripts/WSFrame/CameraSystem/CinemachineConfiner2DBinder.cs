@@ -30,7 +30,6 @@ namespace WS_Modules.CameraSystem
 
         private void OnEnable()
         {
-            SceneManager.sceneLoaded += OnSceneLoaded;
             sceneLoadSucceededUnregister = SceneSystem.RegisterLoadSucceeded(OnSceneLoadSucceeded);
         }
 

@@ -87,7 +87,9 @@ namespace WS_Modules.SceneModule
             IsTransitioning = true;
             try
             {
-                await SceneSystem.LoadSceneAsync(route.TargetSceneName, mode: LoadSceneMode.Single);
+                await SceneSystem.UnloadSceneAsync(SceneSystem.CurrentSceneName);
+                await SceneSystem.LoadSceneAsync(route.TargetSceneName, mode: LoadSceneMode.Additive);
+                SceneSystem.SetActiveScene(route.TargetSceneName);
                 SceneSpawnRoot spawnRoot = FindSceneSpawnRoot();
                 if (!spawnRoot.TryGetSpawnPoint(route.TargetSpawnId, out Transform spawnPoint))
                 {

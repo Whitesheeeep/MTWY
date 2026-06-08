@@ -20,22 +20,26 @@ MonoBehaviour:
   - m_GUID: 3ddcc7a4591f7a7448db2e15150ec6cf
     m_Address: BagWindow
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5545fc195611f7345b770fd9d94f00d9
     m_Address: ItemTipWindow
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 721ff30fcef5aa94c95d580da713cc12
     m_Address: GlobalUIWindow
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8fd87324cd0633044a8da293b4b4bb30
     m_Address: DropWindow
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: ab011b991a745874eb4b5f7ea5c9a997, type: 2}

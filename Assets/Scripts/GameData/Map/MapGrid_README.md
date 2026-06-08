@@ -52,13 +52,14 @@ index = gridY * width + gridX
 2. 将该节点挂到现有 `GameDatabaseRegisterModule` 的子节点中。
 3. 在地图场景中挂 `MapGridRuntimeLoader`。
 4. 把 Bake 得到的 `MapGridData_SO` 引用到 `MapGridRuntimeLoader.mapGridData`。
+5. 把当前地图场景的 `Grid` 手动拖拽到 `MapGridRuntimeLoader.grid`。
 
 场景启用时：
 
 ```text
 MapGridRuntimeLoader.OnEnable
 -> GameDatabase.Get<IMapGridDatabase>()
--> LoadMap(mapGridData)
+-> LoadMap(mapGridData, grid)
 ```
 
 场景卸载或对象禁用时：
@@ -73,12 +74,13 @@ MapGridRuntimeLoader.OnDisable
 
 ```csharp
 IMapGridDatabase mapGrid = GameDatabase.Get<IMapGridDatabase>();
-Vector3Int cell = tilemap.WorldToCell(worldPosition);
+Vector3Int cell = mapGrid.WorldToCell(worldPosition);
 
 if (mapGrid.TryGetCell(cell, out MapGridCellInfo info))
 {
     bool canDig = (info.FinalFlags & MapGridCellFlags.CanDig) != 0;
     bool walkable = mapGrid.IsWalkable(cell);
+    Vector3 cellCenter = mapGrid.GetCellCenterWorld(cell);
 }
 ```
 
@@ -129,3 +131,4 @@ mapGrid.ClearRuntimeOverrides("Furniture:chair_001");
 - `Walkable` 不作为静态 flag 存储，运行时通过 `Blocked | Water | NpcObstacle` 等阻挡属性计算。
 - `MapGridData_SO` 只由 Editor Bake 写入，运行时不要修改。
 - Bake 后需要确认 `MapGridRuntimeLoader` 引用的是最新的 `MapGridData_SO`。
+- 世界坐标与 cell 坐标转换依赖场景中的 `Grid`，不要根据 `originCell` 和 `cellSize` 手算。

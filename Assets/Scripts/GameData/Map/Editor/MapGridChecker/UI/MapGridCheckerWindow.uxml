@@ -1,0 +1,45 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:Style src="project://database/Assets/Scripts/GameData/Map/Editor/MapGridChecker/UI/MapGridCheckerWindow.uss" />
+    <ui:VisualElement name="MapGridCheckerRoot" class="map-grid-checker-root">
+        <ui:VisualElement class="top-bar">
+            <uie:ObjectField name="SourceField" label="Bake Source" class="source-field unity-base-field__aligned" />
+            <uie:ObjectField name="MapDataField" label="Map Data SO" class="map-data-field unity-base-field__aligned" />
+            <ui:Button name="RefreshButton" text="Refresh Check" class="toolbar-button primary-button" />
+        </ui:VisualElement>
+        <ui:VisualElement class="filter-bar">
+            <ui:Toggle name="OverlayToggle" label="Scene Overlay" class="filter-toggle" />
+            <ui:Toggle name="NoneToggle" label="None" class="filter-toggle" />
+            <ui:Toggle name="BlockedToggle" label="Blocked" class="filter-toggle" />
+            <ui:Toggle name="WaterToggle" label="Water" class="filter-toggle" />
+            <ui:Toggle name="CanDigToggle" label="CanDig" class="filter-toggle" />
+            <ui:Toggle name="CanDropItemToggle" label="CanDropItem" class="filter-toggle" />
+            <ui:Toggle name="CanPlaceFurnitureToggle" label="CanPlaceFurniture" class="filter-toggle" />
+            <ui:Toggle name="NpcObstacleToggle" label="NpcObstacle" class="filter-toggle" />
+        </ui:VisualElement>
+        <ui:VisualElement class="main-area">
+            <ui:VisualElement class="report-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Check Report" class="panel-title" />
+                    <ui:Label name="SummaryLabel" class="summary-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="report-head-row">
+                    <ui:Label text="Type" class="head-severity" />
+                    <ui:Label text="Cell" class="head-cell" />
+                    <ui:Label text="Message" class="head-message" />
+                </ui:VisualElement>
+                <ui:ListView name="ReportListView" class="report-list" />
+            </ui:VisualElement>
+            <ui:VisualElement class="info-panel">
+                <ui:Label text="Current Data" class="panel-title" />
+                <ui:Label name="BoundsLabel" class="info-line" />
+                <ui:Label name="ExpectedLabel" class="info-line" />
+                <ui:VisualElement class="legend-section">
+                    <ui:Label text="SceneView Legend" class="section-title" />
+                    <ui:Label text="SO cells are drawn from MapGridData_SO." class="info-line" />
+                    <ui:Label text="Red outline means SO differs from the current Tilemap scan." class="info-line" />
+                    <ui:Label text="Tilemap data is only used as expected data for reports." class="info-line" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

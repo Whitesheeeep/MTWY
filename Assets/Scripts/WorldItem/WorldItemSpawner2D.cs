@@ -2,6 +2,7 @@ using GameData;
 using Inventory;
 using UnityEngine;
 using WS_Modules.CustomEventSystem;
+using WS_Modules.LogModule;
 using WS_Modules.Pooling;
 using WS_Modules.SceneModule;
 using WS_Modules.Singleton;
@@ -40,7 +41,7 @@ namespace WorldItems
             SceneSystem.RegisterLoadSucceeded(OnSceneLoadSucceeded)
                 .UnRegisterWhenGameObjectDisabled(gameObject);
 
-            RefreshVisibleWorldItems();
+            // RefreshVisibleWorldItems();
         }
 
         private void OnDropWorldItemRequested(InventoryDropWorldItemEventArgs eventArgs)
@@ -63,16 +64,21 @@ namespace WorldItems
         /// <summary>
         /// Rebuilds visible world Items from the current map records.
         /// </summary>
-        public void RefreshVisibleWorldItems()
+        public void RefreshVisibleWorldItems(string sceneName)
         {
+            WSLog.Log($"[WorldItemSpawner2D] Refreshing visible world items for map {sceneName}");
             RecycleVisibleWorldItems();
 
-            foreach (WorldItemRecord record in WorldItemManager.GetCurrentMapRecords())
+            foreach (WorldItemRecord record in WorldItemManager.GetBucket(sceneName).Records)
             {
                 Item item = SpawnItem(record.ItemId, record.Count, record.Position);
                 if (item != null)
                 {
-                    WorldItemManager.BindRecordToItem(item, record.InstanceId);
+                    bool bound = WorldItemManager.BindRecordToItem(item, record.InstanceId, sceneName);
+                    if (!bound)
+                    {
+                        PoolManager.Instance.Recycle(item.gameObject);
+                    }
                 }
             }
         }
@@ -91,7 +97,7 @@ namespace WorldItems
 
             itemObject.transform.position = position;
             itemObject.transform.rotation = Quaternion.identity;
-
+            WSLog.Log($"[WorldItemSpawner2D] Spawning item: {itemObject.name} at {position}");
             if (!itemObject.TryGetComponent(out Item item))
             {
                 Debug.LogWarning($"[WorldItemSpawner2D] Pooled prefab does not contain Item. key={itemPrefabKey}", itemObject);
@@ -113,9 +119,9 @@ namespace WorldItems
             return true;
         }
 
-        private void OnSceneLoadSucceeded(SceneLoadSucceededEventArgs _)
+        private void OnSceneLoadSucceeded(SceneLoadSucceededEventArgs args)
         {
-            RefreshVisibleWorldItems();
+            RefreshVisibleWorldItems(args.LoadInfo.SceneName);
         }
 
         private void PrewarmItemPool()

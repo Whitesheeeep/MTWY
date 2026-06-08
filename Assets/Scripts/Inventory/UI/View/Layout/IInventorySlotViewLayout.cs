@@ -11,8 +11,6 @@ namespace WS_Modules.UIModule
         /// <summary>
         /// 当前布局显示的槽位数量。
         /// </summary>
-        int VisibleSlotCount { get; }
-
         /// <summary>
         /// 设置布局运行所需上下文。
         /// </summary>
@@ -28,8 +26,6 @@ namespace WS_Modules.UIModule
         /// 设置当前可显示的槽位数量。
         /// </summary>
         /// <param name="count">槽位数量。</param>
-        void SetVisibleSlotCount(int count);
-
         /// <summary>
         /// 刷新指定槽位。
         /// </summary>

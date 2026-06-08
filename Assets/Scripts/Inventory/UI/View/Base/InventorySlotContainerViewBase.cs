@@ -43,8 +43,6 @@ namespace WS_Modules.UIModule
         /// <summary>
         /// 当前显示槽位数量。
         /// </summary>
-        public virtual int VisibleSlotCount => SlotLayout?.VisibleSlotCount ?? 0;
-
         /// <summary>
         /// 当前 View 使用的槽位布局。
         /// </summary>
@@ -56,12 +54,6 @@ namespace WS_Modules.UIModule
         /// 设置当前可显示槽位数量。
         /// </summary>
         /// <param name="slotCount">槽位数量。</param>
-        public virtual void SetVisibleSlotCount(int slotCount)
-        {
-            ConfigureLayout();
-            SlotLayout?.SetVisibleSlotCount(slotCount);
-        }
-
         /// <inheritdoc />
         public virtual void RefreshSlot(int index, InventorySlotViewData data, bool selected)
         {
@@ -234,11 +226,6 @@ namespace WS_Modules.UIModule
         #endregion
 
         #region Model Events
-        protected virtual int GetVisibleSlotCountFromViewModel()
-        {
-            return viewModel?.Slots.Count ?? 0;
-        }
-
         protected virtual void RefreshSlotFromViewModel(int index)
         {
             if (viewModel == null || index < 0 || index >= viewModel.Slots.Count) return;
@@ -250,7 +237,7 @@ namespace WS_Modules.UIModule
         {
             if (viewModel == null) return;
 
-            SetVisibleSlotCount(GetVisibleSlotCountFromViewModel());
+            ConfigureLayout();
             RefreshSlots(viewModel.Slots, viewModel.SelectedSlotIndex);
         }
 

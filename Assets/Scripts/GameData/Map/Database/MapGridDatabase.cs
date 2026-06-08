@@ -34,21 +34,29 @@ namespace GameData
 
         private MapGridCellData[] cells = Array.Empty<MapGridCellData>();
         private MapGridData_SO loadedMapData;
+        private Grid currentGrid;
         private Vector3Int originCell;
         private int width;
         private int height;
 
         public string CurrentMapId => loadedMapData != null ? loadedMapData.mapId : string.Empty;
         public MapGridData_SO CurrentMapData => loadedMapData;
+        public Grid CurrentGrid => currentGrid;
+        public bool HasCurrentGrid => currentGrid != null;
 
         /// <summary>
         /// 加载一张静态地图数据，并重建运行时查询索引。
         /// </summary>
-        public void LoadMap(MapGridData_SO mapData)
+        public void LoadMap(MapGridData_SO mapData, Grid grid)
         {
             if (mapData == null)
             {
                 throw new ArgumentNullException(nameof(mapData));
+            }
+
+            if (grid == null)
+            {
+                throw new ArgumentNullException(nameof(grid));
             }
 
             if (!mapData.IsValid)
@@ -57,6 +65,7 @@ namespace GameData
             }
 
             loadedMapData = mapData;
+            currentGrid = grid;
             originCell = mapData.originCell;
             width = mapData.width;
             height = mapData.height;
@@ -98,6 +107,7 @@ namespace GameData
         public void UnloadCurrentMap()
         {
             loadedMapData = null;
+            currentGrid = null;
             originCell = Vector3Int.zero;
             width = 0;
             height = 0;
@@ -115,7 +125,30 @@ namespace GameData
                 return;
             }
 
-            LoadMap(loadedMapData);
+            if (currentGrid == null)
+            {
+                throw new InvalidOperationException("[MapGridDatabase] Cannot reload current map because CurrentGrid is null.");
+            }
+
+            LoadMap(loadedMapData, currentGrid);
+        }
+
+        /// <summary>
+        /// 将 cell 坐标转换为当前 Grid 中的世界中心点。
+        /// </summary>
+        public Vector3 GetCellCenterWorld(Vector3Int cell)
+        {
+            EnsureCurrentGrid();
+            return currentGrid.GetCellCenterWorld(cell);
+        }
+
+        /// <summary>
+        /// 将世界坐标转换为当前 Grid 中的 cell 坐标。
+        /// </summary>
+        public Vector3Int WorldToCell(Vector3 worldPosition)
+        {
+            EnsureCurrentGrid();
+            return currentGrid.WorldToCell(worldPosition);
         }
 
         /// <summary>
@@ -328,6 +361,17 @@ namespace GameData
         private bool IsCurrentMap(string mapId)
         {
             return loadedMapData != null && string.Equals(loadedMapData.mapId, mapId, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 确认当前存在 Grid，坐标转换接口依赖它。
+        /// </summary>
+        private void EnsureCurrentGrid()
+        {
+            if (currentGrid == null)
+            {
+                throw new InvalidOperationException("[MapGridDatabase] CurrentGrid is null. Load a map with a Grid before converting coordinates.");
+            }
         }
 
         /// <summary>

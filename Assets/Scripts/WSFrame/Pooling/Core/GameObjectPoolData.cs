@@ -53,6 +53,16 @@ namespace WS_Modules.Pooling
             }
         }
 
+        public void EnsureMaxCapacity(int maxCapacity)
+        {
+            if (_maxCapacity == -1) return;
+
+            if (maxCapacity == -1 || maxCapacity > _maxCapacity)
+            {
+                _maxCapacity = maxCapacity;
+            }
+        }
+
         public void PushObj(GameObject go)
         {
             if (go is null) return;
@@ -93,8 +103,8 @@ namespace WS_Modules.Pooling
                 go = _poolStack.Dequeue();
                 if (go)
                 {
-                    go.SetActive(true);
                     go.transform.SetParent(parent);
+                    go.SetActive(true);
                     if (parent is null) go.MoveToActiveScene();
                     return true;
                 }

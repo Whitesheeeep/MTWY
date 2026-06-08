@@ -16,13 +16,8 @@ namespace WS_Modules.UIModule
         private InventorySlotView slotPrefab;
         private Transform slotRoot;
         private InventorySlotViewEventModule eventModule;
-        private int visibleSlotCount;
+        private int slotCount;
         private bool slotsDirty = true;
-        #endregion
-
-        #region Properties
-        /// <inheritdoc />
-        public int VisibleSlotCount => Mathf.Max(0, visibleSlotCount);
         #endregion
 
         #region Public Methods
@@ -40,12 +35,12 @@ namespace WS_Modules.UIModule
         }
 
         /// <inheritdoc />
-        public void SetVisibleSlotCount(int count)
+        public void SetSlotCount(int count)
         {
             int targetCount = Mathf.Max(0, count);
-            if (visibleSlotCount != targetCount) slotsDirty = true;
+            if (slotCount != targetCount) slotsDirty = true;
 
-            visibleSlotCount = targetCount;
+            slotCount = targetCount;
             EnsureSlotInstances();
         }
 
@@ -60,6 +55,7 @@ namespace WS_Modules.UIModule
         /// <inheritdoc />
         public void RefreshSlots(IReadOnlyList<InventorySlotViewData> dataList, int selectedIndex)
         {
+            SetSlotCount(dataList?.Count ?? 0);
             EnsureSlotInstances();
             for (int i = 0; i < slots.Count; i++)
                 slots[i].Refresh(GetSlotData(dataList, i), i == selectedIndex);
@@ -101,7 +97,7 @@ namespace WS_Modules.UIModule
         #region Slot Instance
         private void EnsureSlotInstances()
         {
-            if (!slotsDirty && slots.Count == VisibleSlotCount) return;
+            if (!slotsDirty && slots.Count == slotCount) return;
 
             if (slotRoot == null || slotPrefab == null)
             {
@@ -110,7 +106,7 @@ namespace WS_Modules.UIModule
             }
 
             CollectDirectSlots();
-            int targetCount = VisibleSlotCount;
+            int targetCount = slotCount;
             for (int i = slots.Count; i < targetCount; i++)
             {
                 InventorySlotView slot = UnityEngine.Object.Instantiate(slotPrefab, slotRoot);
@@ -149,7 +145,7 @@ namespace WS_Modules.UIModule
 
         private bool AreSlotsReady()
         {
-            return !slotsDirty && slots.Count == VisibleSlotCount;
+            return !slotsDirty && slots.Count == slotCount;
         }
 
         private bool TryGetSlot(int index, out InventorySlotView slot)

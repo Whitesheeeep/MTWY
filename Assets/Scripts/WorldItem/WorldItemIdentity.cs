@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace WorldItems
@@ -8,7 +9,7 @@ namespace WorldItems
     [DisallowMultipleComponent]
     public sealed class WorldItemIdentity : MonoBehaviour
     {
-        public int InstanceId { get; private set; }
+        [ReadOnly] public int InstanceId { get; private set; }
         public bool HasIdentity => InstanceId > 0;
 
         public void Initialize(int instanceId)
