@@ -7,8 +7,6 @@ namespace WS_Modules.Singleton
     public abstract class AutoConfigSingletonMonoBase<TSingleton, TConfig> : AutoSingletonMonoBase<TSingleton>
         where TSingleton : AutoConfigSingletonMonoBase<TSingleton, TConfig>
     {
-        protected TConfig InitialConfig { get; private set; }
-
         public sealed override void Init()
         {
             if (!AutoSingletonConfigRegistry.TryGet<TSingleton, TConfig>(out var config))
@@ -16,7 +14,6 @@ namespace WS_Modules.Singleton
                 config = CreateDefaultConfig();
             }
 
-            InitialConfig = config;
             InitWithConfig(config);
         }
 

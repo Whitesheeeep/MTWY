@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: TimeWheelManagerConfigProvider
   m_EditorClassIdentifier: 
   config:
-    tickSeconds: 0.1
+    tickUnit: 0.1
     slotCounts: 000100004000000040000000
     maxCatchUpTicksPerFrame: 1000

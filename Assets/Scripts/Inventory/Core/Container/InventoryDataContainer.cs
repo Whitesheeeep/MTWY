@@ -19,7 +19,6 @@ namespace Inventory
         [SerializeField] private int capacity;
 
         [LabelText("槽位数据")]
-        [ReadOnly]
         [FoldoutGroup("数据")]
         [SerializeField] private InventoryData data = new InventoryData();
 

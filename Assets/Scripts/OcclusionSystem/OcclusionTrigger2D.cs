@@ -1,40 +1,45 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OcclusionSystem
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(Collider2D))]
     public sealed class OcclusionTrigger2D : MonoBehaviour
     {
         [SerializeField] private LayerMask playerLayerMask;
 
-        public event Action<Collider2D, Collider2D> PlayerEntered;
-        public event Action<Collider2D, Collider2D> PlayerExited;
+        public event Action<OcclusionTrigger2D> PlayerEntered;
+        public event Action<OcclusionTrigger2D> PlayerExited;
 
-        private Collider2D triggerCollider;
+        private readonly List<Collider2D> triggerColliders = new();
+        private int activeOverlapCount;
 
         private void Awake()
         {
-            ResolveTriggerCollider();
+            ResolveTriggerColliders();
         }
 
         private void Reset()
         {
-            ResolveTriggerCollider();
-            if (triggerCollider != null)
-            {
-                triggerCollider.isTrigger = true;
-            }
+            ResolveTriggerColliders();
+            SetAllCollidersAsTriggers();
         }
 
         private void OnValidate()
         {
-            ResolveTriggerCollider();
-            if (triggerCollider != null)
+            ResolveTriggerColliders();
+            SetAllCollidersAsTriggers();
+        }
+
+        private void OnDisable()
+        {
+            if (activeOverlapCount > 0)
             {
-                triggerCollider.isTrigger = true;
+                PlayerExited?.Invoke(this);
             }
+
+            activeOverlapCount = 0;
         }
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -44,8 +49,12 @@ namespace OcclusionSystem
                 return;
             }
 
-            ResolveTriggerCollider();
-            PlayerEntered?.Invoke(other, triggerCollider);
+            if (activeOverlapCount == 0)
+            {
+                PlayerEntered?.Invoke(this);
+            }
+
+            activeOverlapCount++;
         }
 
         private void OnTriggerExit2D(Collider2D other)
@@ -55,8 +64,16 @@ namespace OcclusionSystem
                 return;
             }
 
-            ResolveTriggerCollider();
-            PlayerExited?.Invoke(other, triggerCollider);
+            if (activeOverlapCount <= 0)
+            {
+                return;
+            }
+
+            activeOverlapCount--;
+            if (activeOverlapCount == 0)
+            {
+                PlayerExited?.Invoke(this);
+            }
         }
 
         private bool IsPlayerLayer(int layer)
@@ -64,14 +81,19 @@ namespace OcclusionSystem
             return (playerLayerMask.value & (1 << layer)) != 0;
         }
 
-        private void ResolveTriggerCollider()
+        private void ResolveTriggerColliders()
         {
-            if (triggerCollider != null)
-            {
-                return;
-            }
+            triggerColliders.Clear();
+            GetComponents(triggerColliders);
+            triggerColliders.RemoveAll(collider => collider == null);
+        }
 
-            triggerCollider = GetComponent<Collider2D>();
+        private void SetAllCollidersAsTriggers()
+        {
+            foreach (var collider2D in triggerColliders)
+            {
+                collider2D.isTrigger = true;
+            }
         }
     }
 }

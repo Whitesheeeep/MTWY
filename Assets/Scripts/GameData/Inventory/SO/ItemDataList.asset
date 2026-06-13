@@ -121,3 +121,39 @@ MonoBehaviour:
     canCarried: 0
     price: 0
     sellPercent: 0
+  - Id: 1010
+    name: "\u65A7\u5B50"
+    description: 
+    itemType: 4
+    icon: {fileID: 21300000, guid: 3714c3e6b5e3d498ebcd06d432b3dd89, type: 3}
+    worldIcon: {fileID: 21300000, guid: 3714c3e6b5e3d498ebcd06d432b3dd89, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 0
+    price: 0
+    sellPercent: 0
+  - Id: 1011
+    name: "\u9570\u5200"
+    description: 
+    itemType: 6
+    icon: {fileID: 21300000, guid: 9aae36af8a3474f72a99e04af71b7044, type: 3}
+    worldIcon: {fileID: 21300000, guid: 9aae36af8a3474f72a99e04af71b7044, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 0
+    price: 0
+    sellPercent: 0
+  - Id: 1012
+    name: "\u9504\u5934"
+    description: 
+    itemType: 3
+    icon: {fileID: 21300000, guid: 71ca9227166f34790bb8b1c7948d491f, type: 3}
+    worldIcon: {fileID: 21300000, guid: 71ca9227166f34790bb8b1c7948d491f, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 0
+    price: 0
+    sellPercent: 0

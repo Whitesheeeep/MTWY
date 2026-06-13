@@ -70,6 +70,47 @@ MapGridRuntimeLoader.OnDisable
 -> UnloadCurrentMap()
 ```
 
+## 跨场景地图数据缓存（LRU Catalog）
+
+`MapGridDatabase` 只负责当前已加载地图场景的运行时查询。它持有当前场景的 `MapGridData_SO` 和 `Grid`，因此可以处理 `WorldToCell`、`GetCellCenterWorld` 这类世界坐标转换。
+
+NPC 跨场景移动、离线寻路和日程模拟不应该加载所有 Unity 场景，也不应该依赖当前场景的 `Grid`。后续新增独立的 `IMapGridCatalog`，按 `mapId` 异步加载轻量 `MapGridData_SO`，并用 LRU 缓存控制内存。
+
+职责划分：
+
+- `IMapGridDatabase`：当前场景地图，负责当前地图查询、动态覆盖、世界坐标与 cell 坐标转换。
+- `IMapGridCatalog`：跨场景静态地图查询，负责按 `mapId` 加载和缓存 `MapGridData_SO`，不提供世界坐标转换。
+
+LRU Catalog 第一版使用 `ResSystem Key` 配置地图资源：
+
+```text
+mapId -> resourceKey
+maxCachedMaps
+pinCurrentMap
+```
+
+缓存 miss 时由调用方显式异步加载：
+
+```csharp
+IMapGridCatalog catalog = GameDatabase.Get<IMapGridCatalog>();
+
+if (await catalog.EnsureLoadedAsync(targetMapId)
+    && catalog.IsWalkable(targetMapId, nextCell))
+{
+    // 推进 NPC 离线移动状态
+}
+```
+
+LRU 淘汰时，Catalog 通过 `ResSystem` 卸载对应 `MapGridData_SO`。当前场景地图默认可以被 pin，避免 NPC 离线查询导致当前地图被淘汰。
+
+注意：
+
+- Catalog 只加载 `MapGridData_SO`，不会加载 Tilemap、Renderer、Collider、NPC 实体或完整 Unity 场景。
+- Catalog 查询只依赖 `originCell / width / height / cells / staticFlags`。
+- Catalog 第一版只处理静态地图数据。
+- 家具、建筑等持久动态障碍后续通过 `mapId + cell` 的动态覆盖数据源接入。
+- 未缓存地图的 `TryGetCell / IsWalkable / GetNeighbors` 不触发同步加载，调用方需要先 `await EnsureLoadedAsync(mapId)`。
+
 ## 查询示例
 
 ```csharp

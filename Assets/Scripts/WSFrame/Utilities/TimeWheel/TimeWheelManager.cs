@@ -5,7 +5,7 @@ using WS_Modules.Singleton;
 namespace WS_Modules.Utilities
 {
     /// <summary>
-    /// 可选的 Unity 驱动器，默认使用 Time.deltaTime 推进一个 scaled 时间轮。
+    /// 可选的 Unity 驱动器，默认使用 Time.deltaTime 推进一个以真实秒为单位的 scaled 时间轮。
     /// </summary>
     public sealed class TimeWheelManager : AutoConfigSingletonMonoBase<TimeWheelManager, TimeWheelConfig>
     {
@@ -71,6 +71,7 @@ namespace WS_Modules.Utilities
 
         private void Update()
         {
+            // TimeWheelManager 的输入单位是真实秒，因此这里传入 Unity 的 Time.deltaTime。
             _scheduler?.Tick(Time.deltaTime);
         }
 

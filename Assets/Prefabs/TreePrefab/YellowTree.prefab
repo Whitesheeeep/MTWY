@@ -208,8 +208,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19f7467f33096d94fa1c03e81c853d68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetAlpha: 0.45
-  fadeDuration: 0.2
 --- !u!1 &7142785733609222599
 GameObject:
   m_ObjectHideFlags: 0
@@ -491,6 +489,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca4979207bd8e0e40965661490bb8046, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  targetAlpha: 0.45
+  fadeDuration: 0.2
   includeInactiveRenderers: 1
   renderers:
   - {fileID: 7347835025141098733}

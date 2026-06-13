@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 #if UNITY_EDITOR
-using Inventory;
 using UnityEditor;
 #endif
 
@@ -108,7 +107,6 @@ namespace WS_Modules.UIModule
 
             List<InventorySlotView> editorSlots = CollectDirectSlotViews();
             int targetCount = VisibleSlotCount;
-            SyncInventoryManagerBarCapacity(targetCount);
             while (editorSlots.Count < targetCount)
             {
                 InventorySlotView slot = CreateEditorSlot(editorSlots.Count);
@@ -177,21 +175,6 @@ namespace WS_Modules.UIModule
             return result;
         }
 
-        private void SyncInventoryManagerBarCapacity(int targetCount)
-        {
-            InventoryManager manager = UnityEngine.Object.FindFirstObjectByType<InventoryManager>();
-            if (manager == null) return;
-
-            SerializedObject serializedManager = new SerializedObject(manager);
-            SerializedProperty barContainerProperty = serializedManager.FindProperty("barContainer");
-            SerializedProperty barCapacityProperty = barContainerProperty?.FindPropertyRelative("capacity");
-            if (barCapacityProperty == null || barCapacityProperty.intValue == targetCount) return;
-
-            Undo.RecordObject(manager, "Sync Inventory Manager Bar Capacity");
-            barCapacityProperty.intValue = targetCount;
-            serializedManager.ApplyModifiedProperties();
-            EditorUtility.SetDirty(manager);
-        }
         #endregion
 #endif
     }

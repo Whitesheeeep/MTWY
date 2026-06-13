@@ -6,6 +6,9 @@
 // 5. 当 UI 新增可绑定事件组件时，生成器只会追加缺失的事件空方法。
 // 6. 当 UI 删除、重命名或修改组件类型时，旧事件方法不会自动删除，请手动清理。
 using Inventory;
+using CursorSystem;
+using Gameplay.TimeSystem;
+using WS_Modules.LogModule;
 
 namespace WS_Modules.UIModule
 {
@@ -16,6 +19,7 @@ namespace WS_Modules.UIModule
     {
         #region Fields
         private InventoryBarViewModel barViewModel;
+        private ToolCursorViewModel toolCursorViewModel;
         #endregion
 
         #region LifeCycle
@@ -25,12 +29,16 @@ namespace WS_Modules.UIModule
             base.OnAwake();
             PreloadWindow();
             BindBarViewModel();
+            BindToolCursorViewModel();
+            BindTimeUIView();
         }
 
         public override void OnShow()
         {
             base.OnShow();
             BindBarViewModel();
+            BindToolCursorViewModel();
+            BindTimeUIView();
         }
 
         public override void OnDestroy()
@@ -41,6 +49,8 @@ namespace WS_Modules.UIModule
             dataCompt?.BarFrameInventoryBarView?.Unbind();
             barViewModel?.Dispose();
             barViewModel = null;
+            UnbindToolCursorViewModel();
+            UnbindTimeUIView();
             base.OnDestroy();
         }
         #endregion
@@ -91,6 +101,44 @@ namespace WS_Modules.UIModule
             manager.Initialized -= BindBarViewModel;
             barViewModel ??= new InventoryBarViewModel(manager.BarContainer, manager.ItemDatabase);
             dataCompt.BarFrameInventoryBarView.Bind(barViewModel);
+        }
+
+        private void BindToolCursorViewModel()
+        {
+            CursorManager cursorManager = CursorManager.Instance;
+            ToolCursorView toolCursorView = dataCompt?.ToolCursorView;
+            if (toolCursorView == null || cursorManager == null)
+            {
+                return;
+            }
+
+            toolCursorViewModel ??= new ToolCursorViewModel(cursorManager);
+            toolCursorView.Bind(toolCursorViewModel);
+        }
+
+        private void UnbindToolCursorViewModel()
+        {
+            dataCompt?.ToolCursorView?.Unbind();
+            toolCursorViewModel?.Dispose();
+            toolCursorViewModel = null;
+        }
+
+        private void BindTimeUIView()
+        {
+            TimeUIView timeUIView = dataCompt?.TimeUIView;
+            GameTimeManager manager = GameTimeManager.Instance;
+            if (timeUIView == null || manager == null)
+            {
+                WSLog.LogError($"[GlobalUIWindow] TimeUIView or GameTimeManager is null, cannot bind TimeUIView.");
+                return;
+            }
+
+            timeUIView.Bind(manager);
+        }
+
+        private void UnbindTimeUIView()
+        {
+            dataCompt?.TimeUIView?.Unbind();
         }
         #endregion
     }

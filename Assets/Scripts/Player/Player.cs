@@ -1,7 +1,7 @@
 using System;
+using CursorSystem;
 using GameData;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using WS_Modules.CustomEventSystem;
 using WS_Modules.Extensions;
 using WS_Modules.InputModule;
@@ -10,53 +10,34 @@ using WS_Modules.Singleton;
 using EventSystem = WS_Modules.CustomEventSystem.EventSystem;
 
 /// <summary>
-/// Player 运行时入口，负责移动、输入状态暴露和部位 FSM 总控。
+/// Player runtime entry. Owns movement input state, body FSM, hold state, and current selected tool data.
 /// </summary>
 public class Player : AutoSingletonMonoBase<Player>
 {
-    [SerializeField]
-    private SpriteRenderer sr;
-    [SerializeField]
-    private PlayerACController playerACController;
+    [SerializeField] private SpriteRenderer sr;
+    [SerializeField] private PlayerACController playerACController;
 
     private Rigidbody2D rb;
     private PlayerFSMController fsmController;
     private IItemDatabase database;
 
-    /// <summary>
-    /// 普通移动速度。
-    /// </summary>
     public float speed = 5f;
-
-    /// <summary>
-    /// 奔跑移动速度。
-    /// </summary>
     public float runSpeed = 8f;
 
-    /// <summary>
-    /// 当前输入移动方向。
-    /// </summary>
     public Vector2 MoveDir => InputMgr.Instance.MoveDir;
-
-    /// <summary>
-    /// 当前是否按下奔跑输入。
-    /// </summary>
     public bool IsRunPressed => InputMgr.Instance.IsRunPressed;
-
-    /// <summary>
-    /// 最近一次有效移动方向。
-    /// </summary>
     public PlayerDirection CurrentDirection => InputMgr.Instance.LastMoveDirection;
-
-    /// <summary>
-    /// 最近一次有效移动方向对应的 Vector2。
-    /// </summary>
     public Vector2 CurrentDirectionVector => DirectionToVector(CurrentDirection);
+    public bool IsHandHolding { get; private set; }
 
     /// <summary>
-    /// 手部当前是否处于持有状态。
+    /// Current selected tool data. Empty, invalid, or non-tool bar selections clear this value.
     /// </summary>
-    public bool IsHandHolding { get; private set; }
+    public ItemData CurrentToolData { get; private set; }
+
+    public bool HasCurrentTool => CurrentToolData != null;
+    public E_ItemType CurrentToolType => CurrentToolData != null ? CurrentToolData.itemType : E_ItemType.None;
+    public event Action ToolChanged;
 
     protected override void Awake()
     {
@@ -78,7 +59,8 @@ public class Player : AutoSingletonMonoBase<Player>
 
     private void OnEnable()
     {
-        EventSystem.Register_Int<InventoryBarSlotSelectedEventArgs>((int)E_InventoryEvent.BarSlotSelected,
+        EventSystem.Register_Int<InventoryBarSlotSelectedEventArgs>(
+                (int)E_InventoryEvent.BarSlotSelected,
                 OnBarSlotSelected)
             .UnRegisterWhenGameObjectDisabled(gameObject);
     }
@@ -104,25 +86,16 @@ public class Player : AutoSingletonMonoBase<Player>
         rb.MovePosition(transform.position + (MoveDir * (currentSpeed * Time.fixedDeltaTime)).ToVector3_XY());
     }
 
-    /// <summary>
-    /// 设置手部持有状态。
-    /// </summary>
     public void SetHandHolding(bool isHandHolding)
     {
         IsHandHolding = isHandHolding;
     }
 
-    /// <summary>
-    /// 设置手部持有状态的兼容入口，保留 Arm 命名调用。
-    /// </summary>
     public void SetArmHolding(bool isArmHolding)
     {
         SetHandHolding(isArmHolding);
     }
 
-    /// <summary>
-    /// 尝试从 Player AC 注册表获取指定部位的 AC Controller。
-    /// </summary>
     public bool TryGetPartAC(PlayerPartType partType, out PlayerPartACController controller)
     {
         controller = null;
@@ -134,6 +107,12 @@ public class Player : AutoSingletonMonoBase<Player>
         }
 
         return playerACController.TryGet(partType, out controller);
+    }
+
+    public void ClearHoldState()
+    {
+        SetSRSprite(null);
+        IsHandHolding = false;
     }
 
     private static Vector2 DirectionToVector(PlayerDirection direction)
@@ -152,37 +131,60 @@ public class Player : AutoSingletonMonoBase<Player>
         }
     }
 
-    private void SetSRSprite(Sprite sprite) => sr.sprite = sprite;
+    private void SetSRSprite(Sprite sprite)
+    {
+        sr.sprite = sprite;
+    }
 
-    #region BarSlotSelected 事件 Handler
     private void OnBarSlotSelected(InventoryBarSlotSelectedEventArgs args)
     {
         if (args.ItemId == -1)
         {
             ClearHoldState();
+            SetCurrentTool(null);
             return;
         }
 
-        if (database.TryGet(args.ItemId, out ItemData itemData))
+        if (!EnsureItemDatabase() || !database.TryGet(args.ItemId, out ItemData itemData))
         {
-            if (itemData is not { canCarried: true })
-            {
-                SetSRSprite(null);
-                IsHandHolding = false;
-                return;
-            }
+            ClearHoldState();
+            SetCurrentTool(null);
+            return;
+        }
 
+        if (itemData is { canCarried: true })
+        {
             WSLog.Log("[Player] Holding item: " + itemData.name);
-            // 这里可以添加根据选中物品更新玩家状态或动画的逻辑
             SetSRSprite(itemData.worldIcon);
             IsHandHolding = true;
         }
+        else
+        {
+            SetSRSprite(null);
+            IsHandHolding = false;
+        }
+
+        SetCurrentTool(ToolTypeUtility.IsTool(itemData.itemType) ? itemData : null);
     }
 
-    public void ClearHoldState()
+    private void SetCurrentTool(ItemData itemData)
     {
-        SetSRSprite(null);
-        IsHandHolding = false;
+        if (ReferenceEquals(CurrentToolData, itemData))
+        {
+            return;
+        }
+
+        CurrentToolData = itemData;
+        ToolChanged?.Invoke();
     }
-    #endregion
+
+    private bool EnsureItemDatabase()
+    {
+        if (database != null)
+        {
+            return true;
+        }
+
+        return GameDatabase.TryGet(out database);
+    }
 }

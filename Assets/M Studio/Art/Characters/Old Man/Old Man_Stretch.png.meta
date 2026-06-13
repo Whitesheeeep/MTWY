@@ -3,7 +3,7 @@ guid: e3b1a029cd565437b8f7cf11f417d79a
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
-  serializedVersion: 11
+  serializedVersion: 13
   mipmaps:
     mipMapMode: 0
     enableMipMap: 0
@@ -20,11 +20,12 @@ TextureImporter:
     externalNormalMap: 0
     heightScale: 0.25
     normalMapFilter: 0
+    flipGreenChannel: 0
   isReadable: 0
   streamingMipmaps: 0
   streamingMipmapsPriority: 0
   vTOnly: 0
-  ignoreMasterTextureLimit: 0
+  ignoreMipmapLimit: 0
   grayScaleToAlpha: 0
   generateCubemap: 6
   cubemapConvolution: 0
@@ -63,6 +64,8 @@ TextureImporter:
   textureFormatSet: 0
   ignorePngGamma: 0
   applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 1
   platformSettings:
   - serializedVersion: 3
     buildTarget: DefaultTexturePlatform
@@ -74,6 +77,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -86,6 +90,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -98,6 +103,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
@@ -118,7 +124,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 37b296e7ca01441a78bd80a24ad6e299
+      spriteID: 7dec4c23c8496264fa49b282e0a8ca67
       internalID: -2109370372
       vertices: []
       indices: 
@@ -139,7 +145,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 05514480c59a6400188c577fbca8f8d5
+      spriteID: 688ded8ba13bff84ca4b162676043927
       internalID: -1865574414
       vertices: []
       indices: 
@@ -160,7 +166,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: cc782b53290aa437a9f1d60b15ffdd85
+      spriteID: 67444d64e1e13dc47814c9c034f85cca
       internalID: 1425047981
       vertices: []
       indices: 
@@ -181,7 +187,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6e0e73fcdbb8c4bf9bb76303107530c2
+      spriteID: 3f77f47608a817f4aaa7d2238ed6d62d
       internalID: -719025801
       vertices: []
       indices: 
@@ -202,7 +208,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 60259e60a6dda42a48b0912f2a5331eb
+      spriteID: e97900a5e3c5f9a468e61b655598eb66
       internalID: -1575993422
       vertices: []
       indices: 
@@ -223,7 +229,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: fb2470f4019b9456688773ef3a368ea9
+      spriteID: 2bc76fa2c2075b549a15fa9156938bf9
       internalID: 1838184430
       vertices: []
       indices: 
@@ -244,7 +250,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 216cad5d48f21442ab6b4135eac41b4f
+      spriteID: 87392159d01746444a92f06f616a5635
       internalID: 1707046546
       vertices: []
       indices: 
@@ -256,7 +262,7 @@ TextureImporter:
         serializedVersion: 2
         x: 280
         y: 0
-        width: 40
+        width: 39
         height: 60
       alignment: 7
       pivot: {x: 0.5, y: 0}
@@ -265,7 +271,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: cc22321860280468a94418e0db5ea1e3
+      spriteID: 0fae8ced5c491974ba55025ed2b04488
       internalID: -887791915
       vertices: []
       indices: 
@@ -282,17 +288,16 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Man_001_i1_1: -1865574414
-      Man_001_i1_7: -887791915
       Man_001_i1_0: -2109370372
-      Man_001_i1_5: 1838184430
-      Man_001_i1_4: -1575993422
-      Man_001_i1_3: -719025801
+      Man_001_i1_1: -1865574414
       Man_001_i1_2: 1425047981
+      Man_001_i1_3: -719025801
+      Man_001_i1_4: -1575993422
+      Man_001_i1_5: 1838184430
       Man_001_i1_6: 1707046546
-  spritePackingTag: 
+      Man_001_i1_7: -887791915
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  pSDShowRemoveMatteOption: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 

@@ -58,7 +58,7 @@ namespace WS_Modules.UIModule
                 methodDic,
                 extraFiles: new List<ScriptDisplayWindow.GeneratedScriptFile>
                 {
-                    new ScriptDisplayWindow.GeneratedScriptFile(generatedContent, generatedPath, true)
+                    new(generatedContent, generatedPath, true)
                 });
         }
 

@@ -5,7 +5,8 @@ using WS_Modules.Pooling;
 namespace WS_Modules.Utilities
 {
     /// <summary>
-    /// 独立的分层时间轮调度器，由外部传入时间增量推进。
+    /// 独立的分层时间轮调度器，由外部传入单位增量推进。
+    /// 输入单位由调用方定义，可以是真实秒、游戏分钟或其他逻辑时间单位。
     /// </summary>
     public class TimeWheelScheduler
     {
@@ -16,7 +17,11 @@ namespace WS_Modules.Utilities
         // 扫描桶时通过版本号判断它是不是过期记录。
         private readonly struct BucketEntry
         {
+            // 指向真正的任务对象。任务对象由 PoolManager 复用，Entry 本身不拥有任务生命周期。
             internal readonly TimeWheelTask Task;
+
+            // 任务入桶时的调度版本。只要任务重新入桶、暂停或回收，该版本就会变化。
+            // 因此旧 Entry 即使还留在桶里，也会在 IsLiveEntry 中被识别为过期记录。
             internal readonly int ScheduleVersion;
 
             internal BucketEntry(TimeWheelTask task)
@@ -49,7 +54,7 @@ namespace WS_Modules.Utilities
         private readonly Dictionary<long, TimeWheelTask> _tasks = new Dictionary<long, TimeWheelTask>(256);
 
         private long _currentTick;
-        private float _accumulatedSeconds;
+        private float _accumulatedUnits;
 
         // 业务可见的活跃任务数。即使旧记录仍留在桶中，已取消或已完成任务也不计入这里。
         private int _activeCount;
@@ -90,7 +95,7 @@ namespace WS_Modules.Utilities
                 throw new ArgumentNullException(nameof(callback));
             }
 
-            long delayTicks = SecondsToTicks(delay);
+            long delayTicks = UnitsToTicks(delay);
             var task = PoolManager.Instance.GetClass<TimeWheelTask>();
             task.Init(delayTicks, _currentTick + delayTicks, callback);
             _tasks[task.Id] = task;
@@ -109,7 +114,7 @@ namespace WS_Modules.Utilities
             var handle = Schedule(interval, callback);
             if (_tasks.TryGetValue(handle.TaskId, out var task))
             {
-                task.SetRepeat(SecondsToTicks(interval), repeatCount);
+                task.SetRepeat(UnitsToTicks(interval), repeatCount);
             }
 
             return handle;
@@ -153,24 +158,24 @@ namespace WS_Modules.Utilities
             return true;
         }
 
-        public void Tick(float deltaTime)
+        public void Tick(float deltaUnits)
         {
-            if (deltaTime <= 0f)
+            if (deltaUnits <= 0f)
             {
                 return;
             }
 
-            _accumulatedSeconds += deltaTime;
+            _accumulatedUnits += deltaUnits;
 
             int ticks = 0;
-            // 把真实经过时间转换成固定刻度。误差值用来抵消浮点累加误差，
+            // 把外部输入单位转换成固定刻度。误差值用来抵消浮点累加误差，
             // 例如 0.29f + 0.01f 可能略小于 0.3f。
-            while (_accumulatedSeconds + TickEpsilon >= _config.TickSeconds && ticks < _config.MaxCatchUpTicksPerFrame)
+            while (_accumulatedUnits + TickEpsilon >= _config.TickUnit && ticks < _config.MaxCatchUpTicksPerFrame)
             {
-                _accumulatedSeconds -= _config.TickSeconds;
-                if (_accumulatedSeconds is < 0f and > -TickEpsilon)
+                _accumulatedUnits -= _config.TickUnit;
+                if (_accumulatedUnits is < 0f and > -TickEpsilon)
                 {
-                    _accumulatedSeconds = 0f;
+                    _accumulatedUnits = 0f;
                 }
 
                 AdvanceOneTick();
@@ -179,12 +184,12 @@ namespace WS_Modules.Utilities
 
             // 如果某一帧卡顿很久，避免在单帧内无限补刻度。
             // 剩余累计时间会被限制在一个上限内，让后续帧逐步追赶。
-            if (ticks == _config.MaxCatchUpTicksPerFrame && _accumulatedSeconds + TickEpsilon >= _config.TickSeconds)
+            if (ticks == _config.MaxCatchUpTicksPerFrame && _accumulatedUnits + TickEpsilon >= _config.TickUnit)
             {
-                float maxRemainder = _config.TickSeconds * _config.MaxCatchUpTicksPerFrame;
-                if (_accumulatedSeconds > maxRemainder)
+                float maxRemainder = _config.TickUnit * _config.MaxCatchUpTicksPerFrame;
+                if (_accumulatedUnits > maxRemainder)
                 {
-                    _accumulatedSeconds = maxRemainder;
+                    _accumulatedUnits = maxRemainder;
                 }
             }
         }
@@ -207,7 +212,7 @@ namespace WS_Modules.Utilities
             }
 
             _currentTick = 0;
-            _accumulatedSeconds = 0f;
+            _accumulatedUnits = 0f;
         }
 
         private void AdvanceOneTick()
@@ -372,14 +377,14 @@ namespace WS_Modules.Utilities
             return (int)((dueTick / _levelSpans[level]) % _config.GetSlotCount(level));
         }
 
-        private long SecondsToTicks(float seconds)
+        private long UnitsToTicks(float units)
         {
-            if (seconds <= 0f)
+            if (units <= 0f)
             {
                 return 1;
             }
 
-            return Math.Max(1, (long)Math.Ceiling(seconds / _config.TickSeconds));
+            return Math.Max(1, (long)Math.Ceiling(units / _config.TickUnit));
         }
 
         private bool TryGetTask(TimeWheelHandle handle, out TimeWheelTask task)

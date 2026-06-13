@@ -31,6 +31,7 @@ namespace WS_Modules
                 return;
             }
 
+            label.text = "场景";
             DrawScenePopup(position, property, label, options);
         }
 

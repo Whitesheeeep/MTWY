@@ -10,11 +10,8 @@ namespace OcclusionSystem
     [DisallowMultipleComponent]
     public sealed class OcclusionFadeController : MonoBehaviour
     {
-        [SerializeField, Range(0f, 1f)] private float targetAlpha = 0.45f;
-        [SerializeField, Min(0f)] private float fadeDuration = 0.2f;
-
-        private readonly Dictionary<Collider2D, HashSet<Collider2D>> activeContacts = new();
-        private IOcclusionFadeView fadeView;
+        private readonly HashSet<OcclusionTrigger2D> activeTriggers = new();
+        private SpriteOcclusionFadeView fadeView;
         private OcclusionTrigger2D[] triggers;
 
         private void Awake()
@@ -31,53 +28,38 @@ namespace OcclusionSystem
         private void OnDisable()
         {
             UnregisterTriggerEvents();
-            activeContacts.Clear();
+            activeTriggers.Clear();
             fadeView?.ResetImmediate();
         }
 
-        private void Enter(Collider2D playerCollider, Collider2D triggerCollider)
+        private void Enter(OcclusionTrigger2D trigger)
         {
-            if (playerCollider == null || triggerCollider == null)
+            if (trigger == null)
             {
                 return;
             }
 
             bool wasEmpty = !HasActiveContacts();
-            if (!activeContacts.TryGetValue(playerCollider, out HashSet<Collider2D> triggerColliders))
-            {
-                triggerColliders = new HashSet<Collider2D>();
-                activeContacts.Add(playerCollider, triggerColliders);
-            }
-
-            triggerColliders.Add(triggerCollider);
+            activeTriggers.Add(trigger);
 
             if (wasEmpty && HasActiveContacts())
             {
-                fadeView?.FadeTo(targetAlpha, fadeDuration);
+                fadeView?.FadeToConfiguredAlpha();
             }
         }
 
-        private void Exit(Collider2D playerCollider, Collider2D triggerCollider)
+        private void Exit(OcclusionTrigger2D trigger)
         {
-            if (playerCollider == null || triggerCollider == null)
+            if (trigger == null)
             {
                 return;
             }
 
-            if (!activeContacts.TryGetValue(playerCollider, out HashSet<Collider2D> triggerColliders))
-            {
-                return;
-            }
-
-            triggerColliders.Remove(triggerCollider);
-            if (triggerColliders.Count == 0)
-            {
-                activeContacts.Remove(playerCollider);
-            }
+            activeTriggers.Remove(trigger);
 
             if (!HasActiveContacts())
             {
-                fadeView?.Restore(fadeDuration);
+                fadeView?.Restore();
             }
         }
 
@@ -128,25 +110,19 @@ namespace OcclusionSystem
 
         private bool HasActiveContacts()
         {
-            return activeContacts.Count > 0;
+            return activeTriggers.Count > 0;
         }
 
         private int GetActiveContactCount()
         {
-            int count = 0;
-            foreach (HashSet<Collider2D> triggerColliders in activeContacts.Values)
-            {
-                count += triggerColliders.Count;
-            }
-
-            return count;
+            return activeTriggers.Count;
         }
 
         #if UNITY_EDITOR
         [Button]
         private void Debug()
         {
-            WSLog.Log($"Active Player Colliders: {activeContacts.Count}, Active Contacts: {GetActiveContactCount()}");
+            WSLog.Log($"Active Triggers: {GetActiveContactCount()}");
         }
         #endif
     }

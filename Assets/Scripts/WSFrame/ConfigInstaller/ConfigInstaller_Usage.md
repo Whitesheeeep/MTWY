@@ -69,14 +69,14 @@ TimeWheelManager.Instance
 
 在 `TimeWheelManagerConfigProvider.asset` 中编辑嵌套的 `TimeWheelConfig`：
 
-- `tickSeconds`：基础 tick 间隔。
+- `tickUnit`：推进一个基础 tick 需要累计的输入单位。`TimeWheelManager` 使用真实秒作为输入单位。
 - `slotCounts`：时间轮层级和每层槽位数。
 - `maxCatchUpTicksPerFrame`：单帧最多补多少个 tick。
 
 示例配置：
 
 ```text
-tickSeconds = 0.1
+tickUnit = 0.1
 slotCounts = [256, 64, 64]
 maxCatchUpTicksPerFrame = 100
 ```

@@ -101,7 +101,7 @@ namespace Inventory
 
         private void OnValidate()
         {
-            EnsureStorageData();
+
         }
 
         /// <summary>

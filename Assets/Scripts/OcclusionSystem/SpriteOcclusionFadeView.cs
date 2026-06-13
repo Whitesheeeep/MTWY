@@ -5,8 +5,10 @@ using UnityEngine;
 namespace OcclusionSystem
 {
     [DisallowMultipleComponent]
-    public sealed class SpriteOcclusionFadeView : MonoBehaviour, IOcclusionFadeView
+    public sealed class SpriteOcclusionFadeView : MonoBehaviour
     {
+        [SerializeField, Range(0f, 1f)] private float targetAlpha = 0.45f;
+        [SerializeField, Min(0f)] private float fadeDuration = 0.2f;
         [SerializeField] private bool includeInactiveRenderers = true;
         [SerializeField] private List<SpriteRenderer> renderers = new();
         [SerializeField] private Ease ease = Ease.OutQuad;
@@ -34,14 +36,14 @@ namespace OcclusionSystem
             CacheOriginalAlphas();
         }
 
-        public void FadeTo(float alpha, float duration)
+        public void FadeToConfiguredAlpha()
         {
-            TweenTo(Mathf.Clamp01(alpha), Mathf.Max(0f, duration), useOriginalAlpha: false);
+            TweenTo(targetAlpha, fadeDuration, useOriginalAlpha: false);
         }
 
-        public void Restore(float duration)
+        public void Restore()
         {
-            TweenTo(1f, Mathf.Max(0f, duration), useOriginalAlpha: true);
+            TweenTo(1f, fadeDuration, useOriginalAlpha: true);
         }
 
         public void ResetImmediate()
@@ -66,6 +68,9 @@ namespace OcclusionSystem
             RefreshRenderersIfNeeded();
             EnsureOriginalAlphaCount();
             KillTweens();
+
+            alpha = Mathf.Clamp01(alpha);
+            duration = Mathf.Max(0f, duration);
 
             for (int i = 0; i < renderers.Count; i++)
             {
