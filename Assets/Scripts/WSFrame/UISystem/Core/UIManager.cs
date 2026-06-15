@@ -242,7 +242,13 @@ namespace WS_Modules.UIModule
 
         public bool TryGetWindow<T>(out T window) where T : WindowBase
         {
-            window = GetWindow<T>();
+            window = null;
+            if (!EnsureServicesReady())
+            {
+                return false;
+            }
+
+            window = lifecycleService.GetWindow<T>(false);
             return window != null;
         }
 

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d64ed10db40bd549b3dd6e1f5735177, type: 3}
+  m_Name: DialogueSpeakerDataList
+  m_EditorClassIdentifier: 
+  items:
+  - speakerId: Player
+    speakerName: Player
+    nameColor: {r: 1, g: 1, b: 1, a: 1}
+    portraitAtlasAddress: Faces
+    defaultPortraitId: Boy01-1
+    portraitIds:
+    - Boy01-1
+    - Boy01-2
+    - Boy01-3
+  - speakerId: Girl
+    speakerName: Gril
+    nameColor: {r: 0.89433956, g: 0.14680664, b: 0.14680664, a: 1}
+    portraitAtlasAddress: Faces
+    defaultPortraitId: Girl01-1
+    portraitIds:
+    - Girl01-1
+    - Girl01-2
+    - Girl01-3

@@ -631,6 +631,8 @@ GameObject:
   m_Component:
   - component: {fileID: 410271452}
   - component: {fileID: 410271453}
+  - component: {fileID: 410271455}
+  - component: {fileID: 410271454}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -672,6 +674,47 @@ MonoBehaviour:
   barIndex: 0
   bagIndex: 0
   expandSlotCount: 5
+--- !u!114 &410271454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410271451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c6f7d5778f548e092ecbb0a10db901d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dialogueGraphAddress: DialogueGraph_SO
+  startOptions:
+    LeftSpeakerId: Player
+    RightSpeakerId: Girl
+  serviceFactories:
+  - {fileID: 11400000, guid: cde2a7f8eca6a3a44bf332337af3803e, type: 2}
+--- !u!114 &410271455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410271451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 305a5605944aab8499bf4eae3872ac77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dialogueConfig: {fileID: 410271454}
+  graph: {fileID: 11400000, guid: b57fbae1478efab428116e835b9cc04e, type: 2}
+  startOptions:
+    LeftSpeakerId: 
+    RightSpeakerId: 
+  choiceIndex: 0
+  uiLoadWaitMilliseconds: 300
+  useGameTimeManager: 1
+  fallbackToDebugTime: 1
+  debugCurrentDay: 0
+  debugCurrentHour: 0
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

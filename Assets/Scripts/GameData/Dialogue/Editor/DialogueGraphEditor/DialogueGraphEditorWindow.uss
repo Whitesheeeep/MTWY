@@ -1,0 +1,534 @@
+/* 窗口根节点与整体布局 */
+.dialogue-editor-root {
+    flex-grow: 1;
+    background-color: #252525;
+    color: #d6d6d6;
+}
+
+.top-bar {
+    min-height: 36px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 6px;
+    padding-right: 6px;
+    background-color: #202020;
+    border-bottom-width: 1px;
+    border-bottom-color: #111111;
+}
+
+.top-bar-fields {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    flex-direction: row;
+    align-items: center;
+}
+
+.top-bar-actions {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+}
+
+.graph-field {
+    min-width: 180px;
+    width: 260px;
+    flex-shrink: 1;
+    margin-right: 8px;
+}
+
+.graph-name-field {
+    min-width: 120px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 8px;
+}
+
+.toolbar-button {
+    min-width: 58px;
+    height: 28px;
+    margin-right: 4px;
+}
+
+.auto-layout-button {
+    min-width: 76px;
+}
+
+.save-button {
+    min-width: 56px;
+}
+
+.primary-button {
+    background-color: #345d87;
+}
+
+.main-area {
+    flex-grow: 1;
+    min-width: 640px;
+    min-height: 360px;
+    width: auto;
+}
+
+.graph-container {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 320px;
+    background-color: #1f1f1f;
+    border-right-width: 1px;
+    border-right-color: #111111;
+}
+
+.dialogue-graph-view {
+    flex-grow: 1;
+}
+
+/* GraphView 节点基础外框。圆角需要同时作用在 GraphView Node 外层和内部容器上。 */
+.dialogue-node {
+    min-width: 190px;
+    background-color: #202020;
+    border-left-width: 4px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: #3b3b3b;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
+}
+
+.dialogue-graph-view .dialogue-node {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
+}
+
+/* GraphView Node 内部容器。Unity 默认 Node 有多层容器，背景和圆角需要逐层压住。 */
+.dialogue-node-main-container {
+    background-color: #202020;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-node-title-container {
+    min-height: 28px;
+    background-color: #303030;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.dialogue-node-title-container Label {
+    background-color: transparent;
+}
+
+.dialogue-node-port-container {
+    min-height: 34px;
+    background-color: #252525;
+}
+
+.dialogue-node-input-container {
+    background-color: #252525;
+}
+
+.dialogue-node-output-container {
+    background-color: #252525;
+}
+
+.dialogue-node-extension-container {
+    background-color: #202020;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-node-selection-indicator {
+    height: 3px;
+    background-color: #F2FF00;
+    display: none;
+}
+
+/* 节点内部结构化预览：主信息、正文预览、连接摘要。 */
+.dialogue-node-summary {
+    white-space: normal;
+    color: #b8b8b8;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.dialogue-node-preview {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: #202020;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-node-primary {
+    min-height: 22px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin-bottom: 6px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    -unity-font-style: bold;
+    color: #f0f0f0;
+    background-color: #333333;
+    -unity-text-align: middle-left;
+}
+
+.dialogue-node-text-preview {
+    white-space: normal;
+    min-height: 42px;
+    color: #d7d7d7;
+    font-size: 12px;
+}
+
+.dialogue-node-meta {
+    white-space: normal;
+    margin-top: 8px;
+    padding-top: 5px;
+    border-top-width: 1px;
+    border-top-color: #3a3a3a;
+    color: #9fa8b2;
+    font-size: 11px;
+}
+
+/* Start 节点类型色。 */
+.dialogue-graph-view .dialogue-node.dialogue-start-node {
+    border-left-width: 4px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: #43b36a;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-start-node .dialogue-node-title-container,
+.dialogue-node-title-container.dialogue-start-node-title {
+    background-color: #2f7d4d;
+    border-bottom-width: 2px;
+    border-bottom-color: #43b36a;
+}
+
+.dialogue-start-node .dialogue-node-primary {
+    background-color: #2f7d4d;
+}
+
+/* Speech 节点类型色。 */
+.dialogue-graph-view .dialogue-node.dialogue-speech-node {
+    border-left-width: 4px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: #4d8fdb;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-speech-node .dialogue-node-title-container,
+.dialogue-node-title-container.dialogue-speech-node-title {
+    background-color: #315f93;
+    border-bottom-width: 2px;
+    border-bottom-color: #4d8fdb;
+}
+
+.dialogue-speech-node .dialogue-node-primary {
+    background-color: #315f93;
+}
+
+/* Choice 节点类型色。 */
+.dialogue-graph-view .dialogue-node.dialogue-choice-node {
+    border-left-width: 4px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: #d6ad45;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-choice-node .dialogue-node-title-container,
+.dialogue-node-title-container.dialogue-choice-node-title {
+    background-color: #8a6a24;
+    border-bottom-width: 2px;
+    border-bottom-color: #d6ad45;
+}
+
+.dialogue-choice-node .dialogue-node-primary {
+    background-color: #8a6a24;
+}
+
+.dialogue-choice-node .dialogue-node-text-preview {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #f0d58a;
+}
+
+/* End 节点类型色。 */
+.dialogue-graph-view .dialogue-node.dialogue-end-node {
+    border-left-width: 4px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: #d85a5a;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.dialogue-end-node .dialogue-node-title-container,
+.dialogue-node-title-container.dialogue-end-node-title {
+    background-color: #8f3a3a;
+    border-bottom-width: 2px;
+    border-bottom-color: #d85a5a;
+}
+
+.dialogue-end-node .dialogue-node-primary {
+    background-color: #8f3a3a;
+}
+
+/* 编辑器选中态：只改变外框和节点底色，不使用额外黄线。 */
+.dialogue-graph-view .dialogue-node.selected {
+    border-left-width: 8px;
+    border-right-width: 4px;
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-color: #F2FF00;
+    border-left-color: #F2FF00;
+    border-right-color: #F2FF00;
+    border-top-color: #F2FF00;
+    border-bottom-color: #F2FF00;
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-main-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-title-container {
+    border-bottom-width: 2px;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-port-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-input-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-output-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-extension-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-preview {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-text-preview {
+    color: #181818;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-meta {
+    color: #303030;
+    border-top-color: #9aa300;
+}
+
+.dialogue-graph-view .dialogue-node.selected .dialogue-node-selection-indicator {
+    display: none;
+}
+
+/* PlayMode 运行时当前节点：优先级高于普通选中态，用更亮的外框表现。 */
+.dialogue-graph-view .dialogue-node-runtime-current {
+    border-left-width: 9px;
+    border-right-width: 4px;
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-color: #F2FF00;
+    border-left-color: #F2FF00;
+    border-right-color: #F2FF00;
+    border-top-color: #F2FF00;
+    border-bottom-color: #F2FF00;
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-main-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-title-container {
+    border-bottom-width: 2px;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-port-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-input-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-output-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-extension-container {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-preview {
+    background-color: #F2FF00;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-text-preview {
+    color: #181818;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-meta {
+    color: #303030;
+    border-top-color: #9aa300;
+}
+
+.dialogue-graph-view .dialogue-node-runtime-current .dialogue-node-selection-indicator {
+    display: none;
+}
+
+/* 右侧详情面板与校验列表。 */
+.side-panel {
+    min-width: 300px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: #292929;
+}
+
+.details-panel {
+    flex-grow: 1;
+    min-height: 360px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: #151515;
+}
+
+.validation-panel {
+    height: 210px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.panel-title {
+    height: 38px;
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: #d8d8d8;
+    -unity-text-align: middle-left;
+}
+
+.empty-details {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state-text {
+    color: #8d8d8d;
+}
+
+.details-content {
+    flex-grow: 1;
+}
+
+.selected-type-label {
+    height: 24px;
+    color: #9fb6cc;
+    -unity-font-style: bold;
+}
+
+.section {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border-width: 1px;
+    border-color: #151515;
+    background-color: #242424;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 8px;
+}
+
+.section-title {
+    height: 28px;
+    -unity-font-style: bold;
+    color: #c8c8c8;
+    -unity-text-align: middle-left;
+}
+
+.speech-text-field {
+    min-height: 130px;
+}
+
+.choice-extension-container {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top-width: 1px;
+    border-top-color: #343434;
+}
+
+.choice-extension-field {
+    margin-top: 4px;
+}
+
+.readonly-info {
+    white-space: normal;
+    color: #b8b8b8;
+}
+
+.validation-list {
+    flex-grow: 1;
+    background-color: #242424;
+    border-width: 1px;
+    border-color: #151515;
+}
+
+.validation-row {
+    white-space: normal;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: #d8b56d;
+}
+
+.validation-row-ok {
+    color: #86bd89;
+}
+
+/* 通用显示控制。 */
+.is-hidden {
+    display: none;
+}

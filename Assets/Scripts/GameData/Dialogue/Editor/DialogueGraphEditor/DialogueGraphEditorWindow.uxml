@@ -1,0 +1,51 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:Style src="project://database/Assets/Scripts/GameData/Dialogue/Editor/DialogueGraphEditor/DialogueGraphEditorWindow.uss" />
+    <ui:VisualElement name="DialogueGraphEditorRoot" class="dialogue-editor-root">
+        <ui:VisualElement class="top-bar">
+            <ui:VisualElement class="top-bar-fields">
+                <uie:ObjectField name="GraphField" label="Graph" class="graph-field unity-base-field__aligned" />
+                <ui:TextField name="GraphNameField" label="Display Name" class="graph-name-field unity-base-field__aligned" />
+            </ui:VisualElement>
+            <ui:VisualElement class="top-bar-actions">
+                <ui:Button name="AutoLayoutButton" text="Auto Layout" class="toolbar-button auto-layout-button" />
+                <ui:Button name="SaveButton" text="Save" class="toolbar-button primary-button save-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <WS_Modules.UIToolkitExtensions.Editor.CustomTwoPanelSplitView fixed-pane-index="1" fixed-pane-initial-dimension="340" orientation="Horizontal" class="main-area">
+            <ui:VisualElement name="GraphContainer" class="graph-container" />
+            <ui:VisualElement class="side-panel">
+                <ui:VisualElement class="details-panel">
+                    <ui:Label text="Node Details" class="panel-title" />
+                    <ui:VisualElement name="EmptyDetails" class="empty-details">
+                        <ui:Label text="Select a node to edit its data." class="empty-state-text" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="DetailsContent" class="details-content">
+                        <ui:Label name="SelectedTypeLabel" class="selected-type-label" />
+                        <ui:TextField name="TitleField" label="Title" class="unity-base-field__aligned" />
+                        <ui:VisualElement name="SpeechSection" class="section">
+                            <ui:Label text="Speech" class="section-title" />
+                            <ui:VisualElement name="SpeakerPropertyContainer" />
+                            <ui:VisualElement name="PortraitPropertyContainer" />
+                            <ui:TextField name="SpeechTextField" label="Text" multiline="true" class="speech-text-field" />
+                            <ui:Button name="SplitButton" text="Split Speech Node" class="toolbar-button" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="ChoiceSection" class="section">
+                            <ui:Label text="Choice" class="section-title" />
+                            <ui:TextField name="ChoiceTextField" label="Choice Text" class="unity-base-field__aligned" />
+                            <ui:VisualElement name="ChoiceConditionsContainer" class="choice-extension-container" />
+                            <ui:VisualElement name="ChoiceActionsContainer" class="choice-extension-container" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="ReadonlySection" class="section">
+                            <ui:Label text="Structure" class="section-title" />
+                            <ui:Label name="ReadonlyInfoLabel" class="readonly-info" />
+                        </ui:VisualElement>
+                    </ui:ScrollView>
+                </ui:VisualElement>
+                <ui:VisualElement class="validation-panel">
+                    <ui:Label text="Validation" class="panel-title" />
+                    <ui:ScrollView name="ValidationList" class="validation-list" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </WS_Modules.UIToolkitExtensions.Editor.CustomTwoPanelSplitView>
+    </ui:VisualElement>
+</ui:UXML>
