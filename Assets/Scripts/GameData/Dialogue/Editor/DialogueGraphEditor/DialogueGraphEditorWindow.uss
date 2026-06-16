@@ -58,6 +58,10 @@
     min-width: 56px;
 }
 
+.duplicate-button {
+    min-width: 78px;
+}
+
 .primary-button {
     background-color: #345d87;
 }
@@ -108,6 +112,8 @@
 
 /* GraphView Node 内部容器。Unity 默认 Node 有多层容器，背景和圆角需要逐层压住。 */
 .dialogue-node-main-container {
+    min-width: 0;
+    flex-shrink: 1;
     background-color: #202020;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
@@ -142,6 +148,8 @@
 }
 
 .dialogue-node-extension-container {
+    min-width: 0;
+    flex-shrink: 1;
     background-color: #202020;
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
@@ -164,6 +172,9 @@
 }
 
 .dialogue-node-preview {
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 8px;
@@ -174,7 +185,10 @@
 }
 
 .dialogue-node-primary {
+    min-width: 0;
+    flex-shrink: 1;
     min-height: 22px;
+    overflow: hidden;
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 2px;
@@ -192,13 +206,21 @@
 
 .dialogue-node-text-preview {
     white-space: normal;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 300px;
     min-height: 42px;
+    overflow: scroll;
     color: #d7d7d7;
     font-size: 12px;
 }
 
 .dialogue-node-meta {
     white-space: normal;
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
     margin-top: 8px;
     padding-top: 5px;
     border-top-width: 1px;
@@ -490,6 +512,16 @@
 
 .speech-text-field {
     min-height: 130px;
+}
+
+.speech-text-field .unity-text-input {
+    white-space: normal;
+    min-height: 110px;
+}
+
+.speech-text-field .unity-text-field__input {
+    white-space: normal;
+    min-height: 110px;
 }
 
 .choice-extension-container {

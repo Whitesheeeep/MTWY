@@ -2,10 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 namespace GameData
 {
     [CreateAssetMenu(fileName = "DialogueGraph", menuName = "GameData/Dialogue/Dialogue Graph", order = 0)]
@@ -36,6 +32,7 @@ namespace GameData
 
         public List<DialogueNode> Nodes => nodes;
 
+        // 用于编辑器中枚举所有节点的便利方法，避免直接暴露 List<DialogueNode> 的枚举器可能带来的 null 引用问题。
         public IEnumerable<DialogueNode> EnumerateNodes()
         {
             EnsureNodeList();
@@ -94,90 +91,5 @@ namespace GameData
                 }
             }
         }
-
-#if UNITY_EDITOR
-        public TNode CreateNode<TNode>(Vector2 position)
-            where TNode : DialogueNode
-        {
-            return (TNode)CreateNode(typeof(TNode), position);
-        }
-
-        public DialogueNode CreateNode(Type nodeType, Vector2 position)
-        {
-            if (nodeType == null)
-            {
-                throw new ArgumentNullException(nameof(nodeType));
-            }
-
-            if (!typeof(DialogueNode).IsAssignableFrom(nodeType))
-            {
-                throw new ArgumentException($"{nodeType.Name} does not inherit DialogueNode.", nameof(nodeType));
-            }
-
-            EnsureNodeList();
-
-            DialogueNode node = CreateInstance(nodeType) as DialogueNode;
-            node.Guid = GUID.Generate().ToString();
-            node.EditorTitle = ObjectNames.NicifyVariableName(nodeType.Name);
-            node.Position = position;
-            node.name = $"{nodeType.Name}_{node.Guid[..8]}";
-
-            Undo.RecordObject(this, "Create Dialogue Node");
-            nodes.Add(node);
-
-            AssetDatabase.AddObjectToAsset(node, this);
-            Undo.RegisterCreatedObjectUndo(node, "Create Dialogue Node");
-
-            if (node is DialogueStartNode createdStart)
-            {
-                startNode = createdStart;
-            }
-
-            EditorUtility.SetDirty(this);
-            EditorUtility.SetDirty(node);
-            return node;
-        }
-
-        public DialogueStartNode EnsureStartNode()
-        {
-            RemoveNullNodes();
-
-            if (startNode != null && nodes.Contains(startNode))
-            {
-                return startNode;
-            }
-
-            foreach (DialogueNode node in nodes)
-            {
-                if (node is DialogueStartNode existingStart)
-                {
-                    Undo.RecordObject(this, "Assign Dialogue Start Node");
-                    startNode = existingStart;
-                    EditorUtility.SetDirty(this);
-                    return startNode;
-                }
-            }
-
-            DialogueStartNode created = CreateNode<DialogueStartNode>(new Vector2(80f, 180f));
-            created.EditorTitle = "Start";
-            created.name = "Start";
-            return created;
-        }
-
-        public void DeleteNode(DialogueNode node)
-        {
-            if (node == null || node == startNode)
-            {
-                return;
-            }
-
-            Undo.RecordObject(this, "Delete Dialogue Node");
-            ClearReferencesTo(node);
-            nodes.Remove(node);
-            EditorUtility.SetDirty(this);
-
-            Undo.DestroyObjectImmediate(node);
-        }
-#endif
     }
 }

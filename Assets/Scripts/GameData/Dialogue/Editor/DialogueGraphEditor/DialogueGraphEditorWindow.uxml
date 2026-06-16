@@ -8,6 +8,7 @@
             </ui:VisualElement>
             <ui:VisualElement class="top-bar-actions">
                 <ui:Button name="AutoLayoutButton" text="Auto Layout" class="toolbar-button auto-layout-button" />
+                <ui:Button name="DuplicateButton" text="Duplicate" class="toolbar-button duplicate-button" />
                 <ui:Button name="SaveButton" text="Save" class="toolbar-button primary-button save-button" />
             </ui:VisualElement>
         </ui:VisualElement>

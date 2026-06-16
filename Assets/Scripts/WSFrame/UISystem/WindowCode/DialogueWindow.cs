@@ -7,6 +7,7 @@
 // 6. 当 UI 删除、重命名或修改组件类型时，旧事件方法不会自动删除，请手动清理。
 using System.Collections.Generic;
 using GameData;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -32,6 +33,8 @@ namespace WS_Modules.UIModule
         private DialogueViewModel viewModel;
         private EventTrigger dialoguePointerTrigger;
         private EventTrigger.Entry dialoguePointerEntry;
+        private TMProTypeWriter typeWriter;
+        private int textRevealVersion;
         private bool hasWarnedChoiceExpansion;
         #endregion
 
@@ -44,7 +47,9 @@ namespace WS_Modules.UIModule
             BindGeneratedComponents();
             base.OnAwake();
             RegisterDialoguePointerDown();
+            // 让 Text 的不接受射线检测，避免干扰到点击继续的事件穿透。
             ConfigureDialogueTextRaycast();
+            ResolveTypeWriter();
             EnsureChoiceSlotCount(InitialChoiceSlotCount);
             ClearChoiceSlots();
             ClearPortraits();
@@ -64,6 +69,7 @@ namespace WS_Modules.UIModule
         /// </summary>
         public override void OnHide()
         {
+            CancelTextReveal();
             UnbindDialogueViewModel();
             ClearChoiceSlots();
             base.OnHide();
@@ -75,6 +81,7 @@ namespace WS_Modules.UIModule
         public override void OnDestroy()
         {
             UnregisterDialoguePointerDown();
+            CancelTextReveal();
             UnbindDialogueViewModel();
             DisposeChoiceSlots();
             base.OnDestroy();
@@ -103,6 +110,8 @@ namespace WS_Modules.UIModule
 
         private void UnbindDialogueViewModel()
         {
+            CancelTextReveal();
+
             if (viewModel == null)
             {
                 return;
@@ -124,13 +133,15 @@ namespace WS_Modules.UIModule
                 return;
             }
 
-            RefreshDialogueText(viewData);
             RefreshPortraits(viewData);
-            RefreshChoices(viewData);
+            ClearChoiceSlots();
+            RefreshDialogueTextAsync(viewData).Forget();
         }
 
         private void RefreshEmptyDialogue()
         {
+            CancelTextReveal(true);
+
             if (dataCompt?.DialogueTMPTMP_Text != null)
             {
                 dataCompt.DialogueTMPTMP_Text.text = string.Empty;
@@ -140,14 +151,41 @@ namespace WS_Modules.UIModule
             ClearChoiceSlots();
         }
 
-        private void RefreshDialogueText(DialogueViewData viewData)
+        private async UniTaskVoid RefreshDialogueTextAsync(DialogueViewData viewData)
         {
             if (dataCompt?.DialogueTMPTMP_Text == null)
             {
                 return;
             }
 
-            dataCompt.DialogueTMPTMP_Text.text = viewData.Text ?? string.Empty;
+            int version = BeginTextReveal();
+            string text = viewData.Text ?? string.Empty;
+
+            if (typeWriter == null)
+            {
+                dataCompt.DialogueTMPTMP_Text.text = text;
+                RefreshChoicesIfCurrent(viewData, version);
+                return;
+            }
+
+            try
+            {
+                await typeWriter.ShowText(text);
+            }
+            finally
+            {
+                RefreshChoicesIfCurrent(viewData, version);
+            }
+        }
+
+        private void RefreshChoicesIfCurrent(DialogueViewData viewData, int version)
+        {
+            if (version != textRevealVersion || viewData != viewModel?.CurrentDialogue)
+            {
+                return;
+            }
+
+            RefreshChoices(viewData);
         }
 
         private void RefreshPortraits(DialogueViewData viewData)
@@ -217,7 +255,34 @@ namespace WS_Modules.UIModule
         }
         #endregion
 
+        #region TMPro TypeWriter
+        private void ResolveTypeWriter()
+        {
+            TMP_Text dialogueText = dataCompt?.DialogueTMPTMP_Text;
+            if (dialogueText == null)
+            {
+                typeWriter = null;
+                return;
+            }
+
+            typeWriter = dialogueText.GetComponent<TMProTypeWriter>() ?? dialogueText.gameObject.AddComponent<TMProTypeWriter>();
+        }
+
+        private int BeginTextReveal()
+        {
+            CancelTextReveal();
+            return ++textRevealVersion;
+        }
+
+        private void CancelTextReveal(bool clearText = false)
+        {
+            textRevealVersion++;
+            typeWriter?.StopReveal(clearText);
+        }
+        #endregion
+
         #region Choice 槽位
+
         private void EnsureChoiceSlotCount(int requiredCount)
         {
             if (requiredCount > InitialChoiceSlotCount && !hasWarnedChoiceExpansion)
@@ -332,6 +397,12 @@ namespace WS_Modules.UIModule
         private void OnDialoguePointerDown(BaseEventData eventData)
         {
             DialogueViewData viewData = viewModel?.CurrentDialogue;
+            if (IsTextRevealing())
+            {
+                typeWriter.Skip();
+                return;
+            }
+
             if (viewData == null || !viewData.CanContinue || HasVisibleChoices(viewData))
             {
                 return;
@@ -343,6 +414,11 @@ namespace WS_Modules.UIModule
         private static bool HasVisibleChoices(DialogueViewData viewData)
         {
             return viewData.Choices != null && viewData.Choices.Count > 0;
+        }
+
+        private bool IsTextRevealing()
+        {
+            return typeWriter != null && typeWriter.CurrentState == TMProTypeWriter.WriterState.Revealing;
         }
         #endregion
 

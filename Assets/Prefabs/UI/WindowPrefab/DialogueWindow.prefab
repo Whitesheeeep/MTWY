@@ -549,7 +549,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   revealMode: 2
-  typingSpeed: 20
+  typingSpeed: 2
   fadeSpeed: 0.5
   noSkipDuration: 1
 --- !u!1 &5025213835244535380

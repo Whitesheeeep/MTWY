@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: 12ba4a93f5c7c934f9aafeb01f698083
   editorTitle: Speech2
-  position: {x: 780, y: 220.8}
+  position: {x: 787.2, y: 221.59999}
   speakerId: Player
-  portraitId: Boy01-1
-  text: "\u4F60\u662F\u8C01\uFF1F\u6211\u60F3\u77E5\u9053\u4F60"
+  portraitId: Boy01-2
+  text: "\u4F60\u662F\u8C01\uFF1F\u6211\u60F3\u77E5\u9053\u4F60\u6211\u60F3\u77E5\u9053\u4F60\u6211\u60F3\u77E5\u9053\u4F60\u6211\u60F3\u77E5\u9053\u4F60\u6211\u60F3\u77E5\u9053\u4F60\u6211\u60F3\u77E5\u9053\u4F60"
   nextNode: {fileID: -165226778376131501}
   choices: []
 --- !u!114 &-6137789517951221346
@@ -34,7 +34,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: a5165ab37f8698c43ba40a51661a9b9a
   editorTitle: End
-  position: {x: 1924, y: 234.40001}
+  position: {x: 2494.4, y: 234.79999}
 --- !u!114 &-5329882184137880764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -49,7 +49,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: f746cb58404a920418e05b731d242760
   editorTitle: Speech1
-  position: {x: 389.6, y: 220.8}
+  position: {x: 390.40002, y: 221.2}
   speakerId: Player
   portraitId: Boy01-1
   text: "\u4F60\u597D"
@@ -69,9 +69,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: ee86d7e11f3072348af6bb285283cc92
   editorTitle: Choice2
-  position: {x: 1564, y: 357.2}
+  position: {x: 1704.7999, y: 357.59998}
   choiceText: "\u4E0D\u8BF4\u8BDD"
-  targetNode: {fileID: -6137789517951221346}
+  targetNode: {fileID: 8367522859534240727}
   conditions: []
   actions: []
 --- !u!114 &-165226778376131501
@@ -88,7 +88,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: 9be136e9c6cd04e488d2aa44579eba4b
   editorTitle: Speech3
-  position: {x: 1176, y: 220.8}
+  position: {x: 1315.2, y: 221.2}
   speakerId: Girl
   portraitId: Girl01-1
   text: "\u4F60\u60F3\u77E5\u9053\u5417\uFF1F"
@@ -119,6 +119,7 @@ MonoBehaviour:
   - {fileID: 2405604225828442659}
   - {fileID: -6137789517951221346}
   - {fileID: -5145084417562376872}
+  - {fileID: 8367522859534240727}
 --- !u!114 &489717193640485078
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -133,7 +134,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: e3afa90a9a23e024483390f6e83f5ad5
   editorTitle: Start
-  position: {x: 80, y: 220.8}
+  position: {x: 80, y: 221.2}
   nextNode: {fileID: -5329882184137880764}
 --- !u!114 &2405604225828442659
 MonoBehaviour:
@@ -149,10 +150,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   guid: 9fbf98e21aed3a44f9cf7bb7a6c653e7
   editorTitle: Choice1
-  position: {x: 1564, y: 84.8}
+  position: {x: 1704.8, y: 84.8}
   choiceText: "\u6C42\u5979"
-  targetNode: {fileID: -6137789517951221346}
+  targetNode: {fileID: 8367522859534240727}
   conditions:
   - {fileID: 11400000, guid: 3af0388c2cea7364181dc61f47c98e19, type: 2}
   actions:
   - {fileID: 11400000, guid: 27cd39d91a5b75e419a57f1b9f2b5781, type: 2}
+--- !u!114 &8367522859534240727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46c01f37cf1b3404fa2fc019462a6e82, type: 3}
+  m_Name: DialogueSpeechNode_91be40c6
+  m_EditorClassIdentifier: 
+  guid: 91be40c6d742e214397b27f1a8280158
+  editorTitle: Speech
+  position: {x: 2124, y: 221.2}
+  speakerId: Girl
+  portraitId: Girl01-2
+  text: "\u6211\u53EB\u739B\u5229\u4E9A"
+  nextNode: {fileID: -6137789517951221346}
+  choices: []

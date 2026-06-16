@@ -240,7 +240,7 @@ namespace GameData.Editor
                 return $"{countText}\n{conditionNames}";
             }
 
-            return $"{countText}    {conditionNames}    {actionNames}";
+            return $"{countText}\n{conditionNames}\n{actionNames}";
         }
 
         private static string GetObjectNames<T>(IEnumerable<T> objects, string prefix) where T : Object
@@ -326,6 +326,7 @@ namespace GameData.Editor
                 _ => new Vector2(200f, 100f)
             };
         }
+
         #endregion
     }
 }
