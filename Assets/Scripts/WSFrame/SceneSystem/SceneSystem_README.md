@@ -1,4 +1,4 @@
-# Scene System (场景加载系统)
+﻿# Scene System (场景加载系统)
 
 `WS_Modules.SceneModule.SceneSystem` 是一个基于 Unity `SceneManager` 和 `UniTask` 的场景加载封装模块。它提供了一套简洁的 API 来处理同步和异步场景加载，特别支持异步加载时的进度回调和“加载后手动激活”的功能。
 
@@ -200,63 +200,17 @@ private void OnDisable()
 }
 ```
 
-### 4.5 Route 配置式场景转换
+### 4.5 Game Scene Transition
 
-Route 转场用于 2D 角色进入触发器后切换到目标场景，并落到目标场景配置的地点。转场不新增事件；Loading UI、Fader、日志等仍然监听 `SceneSystem.RegisterLoad...`。
+`SceneSystem` now only owns scene loading, unloading, active-scene switching, and scene load events.
 
-#### 目标场景配置 SceneSpawnRoot
-
-在目标场景中放置 `SceneTransition/Prefabs/SceneSpawnRoot.prefab`，或创建一个管理落点的父物体并挂载 `SceneSpawnRoot`。`SceneSpawnRoot` 维护 `TargetSpawnId -> Transform` 的序列化表，子物体名称只用于整理层级，不参与运行时查找。
+Player scene transition logic has moved to the game layer:
 
 ```text
-TownScene
-└── SceneSpawnRoot
-    ├── NorthGateTransform
-    └── HouseDoorTransform
+Assets/Scripts/SceneTransition/
 ```
 
-`SceneSpawnRoot` 表示例：
+The game layer uses `SceneTransitionGraph_SO`, `SceneTransitionEdge`, and reusable `SceneTransitionPoint_SO` assets.
+Triggers store an `edgeId`; target placement is calculated from `MapGridManager.GetCellCenterWorld(edge.toPoint.cell) + edge.toPoint.worldOffset`.
 
-```text
-NorthGate -> NorthGateTransform
-HouseDoor -> HouseDoorTransform
-```
-
-#### Route 配置
-
-创建 `SceneTransitionConfig`，每条 Route 表示“去哪个场景、去哪个地点”。
-
-```text
-RouteId: ToTownNorthGate
-DisplayName: NorthGate
-TargetSceneName: TownScene
-TargetSpawnId: NorthGate
-ResetRigidbodyVelocity: true
-ApplySpawnRotation: false
-```
-
-#### 触发器配置
-
-在源场景的门或区域物体上挂 `SceneTransitionTrigger2D`：
-
-```text
-TravelerLayerMask: Player
-TransitionConfig: SceneTransitionConfig
-Route: TownScene/NorthGate
-```
-
-Route 字段使用 Editor-only 分层菜单，菜单内容只来自 `SceneTransitionConfig.Routes`，不会扫描目标场景。选择后触发器只保存 `routeId`。
-
-运行时流程：
-
-```text
-玩家进入触发器
--> SceneTransitionTrigger2D 根据 routeId 读取 Route
--> SceneTransitionSystem 调用 SceneSystem.LoadSceneAsync(TargetSceneName)
--> 在目标场景查找 SceneSpawnRoot
--> 用 TargetSpawnId 获取 Transform
--> 移动玩家或触发对象到目标位置
-```
-
-如果缺少 `SceneTransitionConfig`、Route、`SceneSpawnRoot` 或 `TargetSpawnId`，系统会抛出明确异常；已经完成的场景加载不会回滚。
-
+The old `SceneTransitionConfig`, Route, `TargetSpawnId`, `SceneSpawnRoot`, and trigger PropertyDrawer workflow has been removed from WSFrame.

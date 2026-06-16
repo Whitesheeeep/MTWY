@@ -80,7 +80,7 @@ namespace Pathfinding
             processStepIndex = 0;
             debugResult.Clear(startCell, targetCell);
 
-            if (!EnsureMapReady(out IMapGridDatabase mapGrid, out string failureReason))
+            if (!EnsureMapReady(out MapGridManager mapGrid, out string failureReason))
             {
                 SetFailure($"查找 Cell 路径失败: {failureReason}");
                 return;
@@ -114,7 +114,7 @@ namespace Pathfinding
             worldPath.Clear();
             processStepIndex = 0;
 
-            if (!EnsureMapReady(out IMapGridDatabase mapGrid, out string failureReason))
+            if (!EnsureMapReady(out MapGridManager mapGrid, out string failureReason))
             {
                 SetFailure($"查找 World 路径失败: {failureReason}");
                 return;
@@ -273,12 +273,13 @@ namespace Pathfinding
         [Button("打印地图状态")]
         public void PrintMapStatus()
         {
-            if (!GameDatabase.TryGet(out IMapGridDatabase mapGrid))
+            if (!GameDatabase.TryGet(out IMapGridDatabase _))
             {
                 Debug.LogError("[MapPathfindingOdinTester] IMapGridDatabase 未注册.");
                 return;
             }
 
+            MapGridManager mapGrid = MapGridManager.Instance;
             Debug.Log(
                 $"[MapPathfindingOdinTester] MapId={mapGrid.CurrentMapId}, HasMapData={mapGrid.CurrentMapData != null}, HasGrid={mapGrid.HasCurrentGrid}");
         }
@@ -298,7 +299,7 @@ namespace Pathfinding
                 return;
             }
 
-            if (!TryGetReadyMapGrid(out IMapGridDatabase mapGrid, out _))
+            if (!TryGetReadyMapGrid(out MapGridManager mapGrid, out _))
             {
                 return;
             }
@@ -314,7 +315,7 @@ namespace Pathfinding
             }
         }
 
-        private bool EnsureMapReady(out IMapGridDatabase mapGrid, out string failureReason)
+        private bool EnsureMapReady(out MapGridManager mapGrid, out string failureReason)
         {
             if (TryGetReadyMapGrid(out mapGrid, out _))
             {
@@ -357,14 +358,15 @@ namespace Pathfinding
                 GameDatabase.Register<IMapGridDatabase>(mapGrid);
             }
 
-            mapGrid.LoadMap(mapGridData, grid);
+            MapGridManager.Instance.LoadMap(mapGridData, grid);
             failureReason = string.Empty;
             return true;
         }
 
-        private static bool TryGetReadyMapGrid(out IMapGridDatabase mapGrid, out string failureReason)
+        private static bool TryGetReadyMapGrid(out MapGridManager mapGrid, out string failureReason)
         {
-            if (!GameDatabase.TryGet(out mapGrid))
+            mapGrid = MapGridManager.Instance;
+            if (!GameDatabase.TryGet(out IMapGridDatabase _))
             {
                 failureReason = "IMapGridDatabase 未注册.";
                 return false;
@@ -387,7 +389,7 @@ namespace Pathfinding
         }
 
         private static bool ValidateCellPathRequest(
-            IMapGridDatabase mapGrid,
+            MapGridManager mapGrid,
             Vector3Int start,
             Vector3Int target,
             out string failureReason)
@@ -425,7 +427,7 @@ namespace Pathfinding
             return transformValue != null ? transformValue.position : fallback;
         }
 
-        private void BuildWorldPathFromCells(IMapGridDatabase mapGrid)
+        private void BuildWorldPathFromCells(MapGridManager mapGrid)
         {
             worldPath.Clear();
             foreach (Vector3Int cell in pathCells)
@@ -434,7 +436,7 @@ namespace Pathfinding
             }
         }
 
-        private void BuildCellsFromWorldPath(IMapGridDatabase mapGrid)
+        private void BuildCellsFromWorldPath(MapGridManager mapGrid)
         {
             pathCells.Clear();
             foreach (Vector3 point in worldPath)
@@ -443,7 +445,7 @@ namespace Pathfinding
             }
         }
 
-        private void DrawPath(IMapGridDatabase mapGrid)
+        private void DrawPath(MapGridManager mapGrid)
         {
             Vector3 previousCenter = Vector3.zero;
             for (int i = 0; i < pathCells.Count; i++)
@@ -467,7 +469,7 @@ namespace Pathfinding
             }
         }
 
-        private void DrawSearchProcess(IMapGridDatabase mapGrid)
+        private void DrawSearchProcess(MapGridManager mapGrid)
         {
             if (!TryGetCurrentDebugStep(out MapPathfindingDebugStep step))
             {
@@ -500,7 +502,7 @@ namespace Pathfinding
             }
         }
 
-        private void DrawSearchLabels(IMapGridDatabase mapGrid, MapPathfindingDebugStep step)
+        private void DrawSearchLabels(MapGridManager mapGrid, MapPathfindingDebugStep step)
         {
             HashSet<Vector3Int> labeledCells = new HashSet<Vector3Int>();
             DrawSearchLabel(mapGrid, step, step.CurrentCell, "cur", labeledCells);
@@ -517,7 +519,7 @@ namespace Pathfinding
         }
 
         private void DrawSearchLabel(
-            IMapGridDatabase mapGrid,
+            MapGridManager mapGrid,
             MapPathfindingDebugStep step,
             Vector3Int cell,
             string state,

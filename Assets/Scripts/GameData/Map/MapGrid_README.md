@@ -1,42 +1,31 @@
 # Map Grid System
 
-Map Grid System 用于把地图场景中的 Tilemap 逻辑层 Bake 成静态 Grid 数据，并在运行时提供格子查询、通行判断、邻居查询和动态覆盖能力。
+Map Grid System 用于把 Tilemap 逻辑层 Bake 成静态格子数据，并在运行时提供当前地图查询、多地图缓存查询、寻路判断和运行时动态覆盖。
 
 ## 模块职责
 
-- `MapGridBakeSource`：挂在地图场景根节点，声明哪些 Tilemap 图层参与 Bake。
-- `MapGridData_SO`：保存 Bake 后的静态地图数据。
-- `MapGridDatabase`：运行时数据库，把 SO 转成一维数组索引并提供查询接口。
-- `MapGridRuntimeLoader`：挂在地图场景中，场景启用时加载本场景的 `MapGridData_SO`。
-- `MapGridDatabaseRegisterNode`：接入 WSFrame `ConfigInstaller`，注册 `IMapGridDatabase`。
+- `MapGridBakeSource`：Editor Bake 入口，声明哪些 Tilemap 图层参与扫描。
+- `MapGridData_SO`：保存 Bake 后的静态地图数据，只记录逻辑 cell、flags、bounds 和索引。
+- `MapGridCatalog_SO`：按 `mapId` 配置地图资源 key、缓存上限和是否常驻。
+- `MapGridRuntimeLoader`：场景内 Loader，手动引用当前场景的 `MapGridData_SO` 和 `Grid`。
+- `MapGridManager`：对外唯一入口，封装当前地图、多地图查询和 runtime override。
+- `MapGridDatabase`：多地图静态/动态数据聚合器，负责 pinned 地图、LRU 地图缓存和业务日志。
+- `MapGridMapCache`：MapGrid 专用运行时地图缓存，统一封装 pinned 地图与可淘汰 LRU 地图。
+- `MapGridStaticModule`：单张地图的静态 SO 索引。
+- `MapGridRuntimeOverrideModule`：单张地图的动态覆盖数据。
+- `LruCache<TKey, TValue>`：通用 LRU 缓存容器，保存可淘汰地图并在容量超限时触发事件。
 
-`MapGridDatabase` 不依赖 `SceneSystem`。场景切换后，Unity 会启用新场景中的 `MapGridRuntimeLoader`，由它加载对应地图数据。
-
-## Editor Bake 流程
+## Editor Bake
 
 1. 在地图场景根节点挂 `MapGridBakeSource`。
-2. 在 `MapId` 字段选择当前场景名。该字段使用 `[WSScene]`，来源是 Build Settings 中启用的场景。
-3. 点击 `Auto Fill Layers From Children`，工具会按子物体 Tilemap 名称自动识别常见逻辑层。
-4. 检查 `layers` 中每个 Tilemap 对应的 `MapGridCellFlags`。
-5. 点击 `Bake Map Grid Data`。
+2. `MapId` 使用 `[WSScene]`，当前约定等于场景名。
+3. 配置参与 Bake 的 Tilemap layers 和每层对应的 `MapGridCellFlags`。
+4. 点击 `Bake Map Grid Data` 写入 `MapGridData_SO`。
 
-如果 `outputData` 为空，Bake 工具会自动在 `Assets/Scripts/GameData/Map/SO` 下创建 `MapGridData_SO`。
-
-当前自动识别的图层名：
-
-- `Collision` -> `Blocked`
-- `Water` -> `Water`
-- `CanDig` 或 `Dig` -> `CanDig`
-- `CanDropItem` -> `CanDropItem`
-- `CanPlaceFurniture` -> `CanPlaceFurniture`
-- `NPC Obstacle` -> `NpcObstacle`
-
-## Bounds 与坐标
-
-不同 Tilemap 的 bounds 可以不一样。Bake 时会合并所有 `affectsBounds == true` 的图层 bounds，得到统一 Grid：
+不同 Tilemap 的 bounds 可以不一致。Bake 时会合并所有 `affectsBounds == true` 的图层 bounds：
 
 ```text
-originCell = combinedBounds 左下角 cell
+originCell = combinedBounds.min
 width = combinedBounds.size.x
 height = combinedBounds.size.y
 gridX = cell.x - originCell.x
@@ -44,132 +33,159 @@ gridY = cell.y - originCell.y
 index = gridY * width + gridX
 ```
 
-运行时查询以 Unity Tilemap 的 `Vector3Int cellPosition` 为权威坐标，`gridX/gridY` 只是数组索引。
+运行时查询以 `Vector3Int cellPosition` 为权威坐标，`gridX/gridY` 只是数组索引。
 
-## 运行时接入
+## 当前地图加载
 
-1. 创建 `MapGridDatabaseRegisterNode`。
-2. 将该节点挂到现有 `GameDatabaseRegisterModule` 的子节点中。
-3. 在地图场景中挂 `MapGridRuntimeLoader`。
-4. 把 Bake 得到的 `MapGridData_SO` 引用到 `MapGridRuntimeLoader.mapGridData`。
-5. 把当前地图场景的 `Grid` 手动拖拽到 `MapGridRuntimeLoader.grid`。
+地图场景中放一个 `MapGridRuntimeLoader`：
 
-场景启用时：
+- `mapGridDataKey`：当前场景地图数据的 `ResSystem` key，优先使用
+- `mapGridData`：当前场景 Bake 出来的 `MapGridData_SO`，当 key 为空或加载失败时兜底使用
+- `grid`：当前场景的 `Grid`，Inspector 手动拖拽
+
+启用时：
 
 ```text
 MapGridRuntimeLoader.OnEnable
--> GameDatabase.Get<IMapGridDatabase>()
--> LoadMap(mapGridData, grid)
+-> 如果 mapGridDataKey 非空，先通过 ResSystem 加载 MapGridData_SO
+-> 否则或加载失败，使用 Inspector 中拖拽的 mapGridData
+-> MapGridManager.Instance.LoadCurrentMap(resolvedMapData, grid)
 ```
 
-场景卸载或对象禁用时：
+如果该 `mapId` 已经在缓存中，Database 不会重建静态索引，也不会清空 runtime overrides，只会绑定为当前地图并 pin 住。
+
+禁用时：
 
 ```text
 MapGridRuntimeLoader.OnDisable
--> 如果数据库当前持有自己的 mapGridData
--> UnloadCurrentMap()
+-> 如果当前地图来自自己
+-> MapGridManager.Instance.UnloadCurrentMap()
 ```
 
-## 跨场景地图数据缓存（LRU Catalog）
+`UnloadCurrentMap()` 只解除当前场景绑定和 current scene pin，不会立刻删除缓存和动态数据。真正删除由 LRU 后续决定。
 
-`MapGridDatabase` 只负责当前已加载地图场景的运行时查询。它持有当前场景的 `MapGridData_SO` 和 `Grid`，因此可以处理 `WorldToCell`、`GetCellCenterWorld` 这类世界坐标转换。
+## 多地图缓存
 
-NPC 跨场景移动、离线寻路和日程模拟不应该加载所有 Unity 场景，也不应该依赖当前场景的 `Grid`。后续新增独立的 `IMapGridCatalog`，按 `mapId` 异步加载轻量 `MapGridData_SO`，并用 LRU 缓存控制内存。
-
-职责划分：
-
-- `IMapGridDatabase`：当前场景地图，负责当前地图查询、动态覆盖、世界坐标与 cell 坐标转换。
-- `IMapGridCatalog`：跨场景静态地图查询，负责按 `mapId` 加载和缓存 `MapGridData_SO`，不提供世界坐标转换。
-
-LRU Catalog 第一版使用 `ResSystem Key` 配置地图资源：
+`MapGridDatabase` 通过 `MapGridMapCache` 同时持有多张地图，并按 pinned 与 LRU 分组：
 
 ```text
-mapId -> resourceKey
-maxCachedMaps
-pinCurrentMap
+pinnedMaps（MapGridMapCache 内部）
+-> 当前场景地图或 Catalog 常驻地图，不参与 LRU 淘汰
+
+lruMaps（MapGridMapCache 内部）
+-> 可淘汰地图，由 LruCache<string, MapGridMapState> 管理
 ```
 
-缓存 miss 时由调用方显式异步加载：
+`MapGridCatalog_SO` 配置：
 
-```csharp
-IMapGridCatalog catalog = GameDatabase.Get<IMapGridCatalog>();
-
-if (await catalog.EnsureLoadedAsync(targetMapId)
-    && catalog.IsWalkable(targetMapId, nextCell))
-{
-    // 推进 NPC 离线移动状态
-}
+```text
+entries:
+  mapId       = 场景名/地图 ID
+  resourceKey = ResSystem 使用的资源 key
+  pinOnLoad   = 加载后是否常驻
+maxCachedMaps = 最大可淘汰地图缓存数
 ```
 
-LRU 淘汰时，Catalog 通过 `ResSystem` 卸载对应 `MapGridData_SO`。当前场景地图默认可以被 pin，避免 NPC 离线查询导致当前地图被淘汰。
+LRU 规则：
 
-注意：
+- 当前场景地图通过 `pinFromCurrentScene` 进入 `pinnedMaps`。
+- Catalog 中 `pinOnLoad` 的地图通过 `pinFromCatalog` 进入 `pinnedMaps`。
+- Pinned 地图不占用 `maxCachedMaps`，也不会进入 LRU。
+- 未 pinned 的地图进入 `lruMaps`，最多保留 `maxCachedMaps` 张。
+- `lruMaps` 超容量时淘汰最近最少使用的地图；Trim 不处理 `currentMapId/currentGrid`。
 
-- Catalog 只加载 `MapGridData_SO`，不会加载 Tilemap、Renderer、Collider、NPC 实体或完整 Unity 场景。
-- Catalog 查询只依赖 `originCell / width / height / cells / staticFlags`。
-- Catalog 第一版只处理静态地图数据。
-- 家具、建筑等持久动态障碍后续通过 `mapId + cell` 的动态覆盖数据源接入。
-- 未缓存地图的 `TryGetCell / IsWalkable / GetNeighbors` 不触发同步加载，调用方需要先 `await EnsureLoadedAsync(mapId)`。
+## 查询接口
 
-## 查询示例
+当前地图查询：
 
 ```csharp
-IMapGridDatabase mapGrid = GameDatabase.Get<IMapGridDatabase>();
+MapGridManager mapGrid = MapGridManager.Instance;
 Vector3Int cell = mapGrid.WorldToCell(worldPosition);
 
 if (mapGrid.TryGetCell(cell, out MapGridCellInfo info))
 {
     bool canDig = (info.FinalFlags & MapGridCellFlags.CanDig) != 0;
     bool walkable = mapGrid.IsWalkable(cell);
-    Vector3 cellCenter = mapGrid.GetCellCenterWorld(cell);
+    Vector3 center = mapGrid.GetCellCenterWorld(cell);
 }
 ```
 
-邻居查询可供 A* 或区域逻辑使用：
+指定地图查询：
 
 ```csharp
-foreach (Vector3Int neighbor in mapGrid.GetNeighbors(cell))
+string mapId = "02_Home_01";
+
+if (await MapGridManager.Instance.EnsureLoadedAsync(mapId))
 {
-    // neighbor 已经过 IsWalkable 过滤
+    bool walkable = MapGridManager.Instance.IsWalkable(mapId, targetCell);
 }
 ```
+
+指定地图查询不依赖 `Grid`，适合 NPC 离线移动、跨场景路径规划和日程模拟。世界坐标转换仍然只适用于当前场景，因为它需要当前场景真实的 `Grid`。
 
 ## Runtime Overrides
 
-静态 SO 不保存家具、作物、临时障碍等运行时状态。这些业务对象应该独立存档，然后在加载后把对 Grid 的影响同步给 `MapGridDatabase`。
+静态 SO 不保存家具、建筑、作物、NPC 临时阻挡等运行时状态。业务系统应保存自己的持久化数据，并在地图加载后把影响写入 `MapGridManager`。
 
-例：家具占用某格，临时添加阻挡：
+当前地图写入：
 
 ```csharp
-mapGrid.SetRuntimeOverride(
+MapGridManager.Instance.TryApplyOverride(
     sourceId: "Furniture:chair_001",
-    cell: furnitureCell,
+    cells: new[] { furnitureCell },
     addFlags: MapGridCellFlags.Blocked);
 ```
 
-家具移除时清除自己的覆盖：
+指定地图写入：
 
 ```csharp
-mapGrid.ClearRuntimeOverrides("Furniture:chair_001");
+var record = new MapGridRuntimeOverrideRecord
+{
+    mapId = "02_Home_01",
+    sourceId = "Furniture:chair_001",
+    occupiedCells = new List<Vector3Int> { furnitureCell },
+    addFlags = MapGridCellFlags.Blocked,
+    removeFlags = MapGridCellFlags.None
+};
+
+MapGridManager.Instance.TryApplyOverride(record);
 ```
 
-`sourceId` 用于避免不同系统互相误删覆盖。比如家具和作物同时影响同一格时，只清除家具的 `sourceId` 不会影响作物。
+规则：
 
-## 场景切换约定
+- `record.mapId` 必须非空。
+- 第一版只允许对已加载地图写 override。
+- `sourceId` 建议使用 `SystemName:instanceId`，例如 `Furniture:chair_001`。
+- 清理一个 `sourceId` 不会影响其他系统写入的覆盖。
 
-方案 A 保留 `MapGridRuntimeLoader`：
+清理：
 
-- 地图场景放一个 `MapGridRuntimeLoader`。
-- 非地图场景不放 `MapGridRuntimeLoader`。
-- `SceneSystem` 不需要额外注册地图事件。
-- Single 场景切换时，旧 Loader 卸载旧地图，新 Loader 加载新地图。
+```csharp
+MapGridManager.Instance.ClearOverrides("02_Home_01", "Furniture:chair_001");
+MapGridManager.Instance.ClearAllOverrides("02_Home_01");
+```
 
-如果后续需要 Additive 多地图同时存在，再扩展 `IMapGridDatabase` 为多地图并行查询。
+## Pathfinding
+
+当前场景世界坐标路径仍然依赖当前 `Grid`：
+
+```csharp
+MapPathfindingService.TryFindWorldPath(startWorld, targetWorld, worldPath);
+```
+
+指定地图 cell 路径可以用于离线 NPC：
+
+```csharp
+await MapPathfindingService.TryFindPathAsync(
+    mapId,
+    startCell,
+    targetCell,
+    pathCells);
+```
 
 ## 注意事项
 
-- `MapId` 当前约定等于场景名，SO 不再额外保存 `SceneName`。
-- `Walkable` 不作为静态 flag 存储，运行时通过 `Blocked | Water | NpcObstacle` 等阻挡属性计算。
-- `MapGridData_SO` 只由 Editor Bake 写入，运行时不要修改。
-- Bake 后需要确认 `MapGridRuntimeLoader` 引用的是最新的 `MapGridData_SO`。
-- 世界坐标与 cell 坐标转换依赖场景中的 `Grid`，不要根据 `originCell` 和 `cellSize` 手算。
+- `MapGridData_SO` 只保存逻辑数据，不保存世界坐标或 `Grid`。
+- 世界坐标和 cell 坐标转换统一走当前场景 `Grid` 或 `MapGridManager`，不要手算。
+- `Walkable` 不作为静态 flag 存储，而是由 `Blocked | Water | NpcObstacle` 等阻挡 flags 推导。
+- `mapGridDataKey` 和 Catalog 的 `resourceKey` 都必须匹配当前 `ResSystem` 后端：Resources 模式使用 Resources 路径，Addressables 模式使用 Addressables key。

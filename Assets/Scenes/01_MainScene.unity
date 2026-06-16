@@ -42648,7 +42648,7 @@ GameObject:
   - component: {fileID: 1587698457}
   - component: {fileID: 1587698459}
   - component: {fileID: 1587698461}
-  - component: {fileID: 1587698460}
+  - component: {fileID: 1587698462}
   m_Layer: 0
   m_Name: House_02_Door
   m_TagString: Untagged
@@ -42723,22 +42723,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &1587698460
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1587698456}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b0cb06225264aeab8fa94d2ce8fcb87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  travelerLayerMask:
-    serializedVersion: 2
-    m_Bits: 256
-  routeId: 02_Home_01_Door
 --- !u!61 &1587698461
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -42784,6 +42768,22 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 2}
   m_EdgeRadius: 0
+--- !u!114 &1587698462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587698456}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f1ca21c1d125af4db4f25b27b69e3f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  travelerLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  edgeId: MainScene_Home_to_Home01_Door
 --- !u!1 &1703038574
 GameObject:
   m_ObjectHideFlags: 0
@@ -47361,29 +47361,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3591198649876724436}
-  - component: {fileID: 3591198649876724439}
   m_Layer: 0
-  m_Name: SceneSpawnRoot
+  m_Name: SceneTransitionPoints
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &3591198649876724439
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3591198649876724437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f0c13f79d4244019fc90e1ee9773a3f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawnEntries:
-  - targetSpawnId: Home
-    spawnTransform: {fileID: 8632759906779763703}
 --- !u!1001 &3775871105617624461
 PrefabInstance:
   m_ObjectHideFlags: 0
