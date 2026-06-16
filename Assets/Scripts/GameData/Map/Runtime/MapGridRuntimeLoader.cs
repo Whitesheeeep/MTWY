@@ -1,56 +1,91 @@
+using System;
+using Cysharp.Threading.Tasks;
+using Sirenix.OdinInspector;
 using UnityEngine;
+using WS_Modules;
+using WS_Modules.ResLoadModule;
 
 namespace GameData
 {
     /// <summary>
-    /// 场景内地图运行时加载器，负责把本场景对应的 MapGridData_SO 加载进 MapGridDatabase。
+    /// Scene-local loader that binds the scene Grid and its MapGridData to MapGridManager.
     /// </summary>
     public sealed class MapGridRuntimeLoader : MonoBehaviour
     {
-        /// <summary>
-        /// 当前场景对应的地图静态数据。
-        /// </summary>
+        [Header("Map Data")]
+        [InfoBox("优先使用 MapGridData Key 加载地图数据，如果 Key 无效或未配置，则使用直接引用的 MapGridData。")]
+        [SerializeField, WSAddressableKey("MapGrid", "SO")] private string mapGridDataKey;
         [SerializeField] private MapGridData_SO mapGridData;
 
-        /// <summary>
-        /// 当前地图场景使用的 Grid。需要在 Inspector 中手动拖拽。
-        /// </summary>
+        [Header("Scene Grid")]
         [SerializeField] private Grid grid;
 
-        /// <summary>
-        /// 场景启用时加载地图数据。
-        /// </summary>
+        private int loadVersion;
+        private MapGridData_SO loadedMapData;
+
         private void OnEnable()
         {
-            if (mapGridData == null)
+            loadVersion++;
+            LoadMapAsync(loadVersion).Forget();
+        }
+
+        private void OnDisable()
+        {
+            loadVersion++;
+
+            if (loadedMapData != null && MapGridManager.Instance.CurrentMapData == loadedMapData)
             {
-                Debug.LogError($"[MapGridRuntimeLoader] MapGridData is not assigned on {name}.");
-                return;
+                MapGridManager.Instance.UnloadCurrentMap();
             }
 
+            loadedMapData = null;
+        }
+
+        private async UniTaskVoid LoadMapAsync(int version)
+        {
             if (grid == null)
             {
                 Debug.LogError($"[MapGridRuntimeLoader] Grid is not assigned on {name}.");
                 return;
             }
 
-            GameDatabase.Get<IMapGridDatabase>().LoadMap(mapGridData, grid);
-        }
-
-        /// <summary>
-        /// 场景卸载或对象禁用时，仅当数据库当前持有自己的数据时才卸载。
-        /// </summary>
-        private void OnDisable()
-        {
-            if (!GameDatabase.TryGet(out IMapGridDatabase database))
+            MapGridData_SO resolvedMapData = await ResolveMapDataAsync();
+            if (version != loadVersion || !isActiveAndEnabled)
             {
                 return;
             }
 
-            if (database.CurrentMapData == mapGridData)
+            if (resolvedMapData == null)
             {
-                database.UnloadCurrentMap();
+                Debug.LogError($"[MapGridRuntimeLoader] MapGridData is not configured on {name}. Assign mapGridDataKey or mapGridData.");
+                return;
             }
+
+            loadedMapData = resolvedMapData;
+            MapGridManager.Instance.LoadCurrentMap(resolvedMapData, grid);
+        }
+
+        private async UniTask<MapGridData_SO> ResolveMapDataAsync()
+        {
+            if (!string.IsNullOrWhiteSpace(mapGridDataKey))
+            {
+                try
+                {
+                    MapGridData_SO keyData = await ResSystem.Instance.LoadAsync<MapGridData_SO>(mapGridDataKey);
+                    if (keyData != null)
+                    {
+                        return keyData;
+                    }
+
+                    Debug.LogError($"[MapGridRuntimeLoader] Failed to load MapGridData_SO by key '{mapGridDataKey}' on {name}.");
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
+
+            return mapGridData;
         }
     }
 }

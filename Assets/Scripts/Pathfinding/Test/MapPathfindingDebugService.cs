@@ -50,7 +50,7 @@ namespace Pathfinding
             pathCells.Clear();
             debugResult.Clear(startCell, targetCell);
 
-            if (!TryGetMapGrid(out IMapGridDatabase mapGrid))
+            if (!TryGetMapGrid(out MapGridManager mapGrid))
             {
                 debugResult.Complete(false, "Current map data or Grid is not loaded.");
                 return false;
@@ -223,7 +223,7 @@ namespace Pathfinding
 
             worldPath.Clear();
 
-            if (!TryGetMapGrid(out IMapGridDatabase mapGrid))
+            if (!TryGetMapGrid(out MapGridManager mapGrid))
             {
                 return false;
             }
@@ -244,17 +244,13 @@ namespace Pathfinding
             return true;
         }
 
-        private static bool TryGetMapGrid(out IMapGridDatabase mapGrid)
+        private static bool TryGetMapGrid(out MapGridManager mapGrid)
         {
-            if (!GameDatabase.TryGet(out mapGrid))
-            {
-                return false;
-            }
-
+            mapGrid = MapGridManager.Instance;
             return mapGrid.CurrentMapData != null && mapGrid.HasCurrentGrid;
         }
 
-        private static IEnumerable<Vector3Int> GetWalkableNeighbors(IMapGridDatabase mapGrid, Vector3Int current)
+        private static IEnumerable<Vector3Int> GetWalkableNeighbors(MapGridManager mapGrid, Vector3Int current)
         {
             foreach (Vector2Int offset in NeighborOffsets)
             {
@@ -273,7 +269,7 @@ namespace Pathfinding
             }
         }
 
-        private static bool CanMoveDiagonally(IMapGridDatabase mapGrid, Vector3Int current, Vector2Int offset)
+        private static bool CanMoveDiagonally(MapGridManager mapGrid, Vector3Int current, Vector2Int offset)
         {
             Vector3Int horizontal = new Vector3Int(current.x + offset.x, current.y, current.z);
             Vector3Int vertical = new Vector3Int(current.x, current.y + offset.y, current.z);

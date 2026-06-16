@@ -10,7 +10,7 @@ namespace Gameplay.TimeSystem
         /// 当前对象使用的游戏时间管理器。
         /// 实现者通过它注册、取消或恢复自己的游戏时间任务。
         /// </summary>
-        GameTimeManager TimeManager { get; set; }
+        GameTimeManager GameTimeManager { get; set; }
 
         /// <summary>
         /// 开始接入游戏时间，并由对象自行安排下一次状态变化。

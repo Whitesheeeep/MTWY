@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace GameData
@@ -27,6 +28,10 @@ namespace GameData
         /// 当前是否持有可用于世界坐标转换的 Grid。
         /// </summary>
         bool HasCurrentGrid { get; }
+
+        UniTask<bool> EnsureLoadedAsync(string mapId);
+
+        bool IsLoaded(string mapId);
 
         /// <summary>
         /// 加载地图数据并重建运行时索引，同时清空 runtime overrides。
@@ -92,6 +97,14 @@ namespace GameData
         /// 获取指定地图中可通行的邻居 cell。第一版只支持当前地图。
         /// </summary>
         IEnumerable<Vector3Int> GetNeighbors(string mapId, Vector3Int cell, bool includeDiagonal = false);
+
+        void SetRuntimeOverride(string mapId, string sourceId, Vector3Int cell, MapGridCellFlags addFlags, MapGridCellFlags removeFlags = MapGridCellFlags.None);
+
+        void ClearRuntimeOverride(string mapId, string sourceId, Vector3Int cell);
+
+        void ClearRuntimeOverrides(string mapId, string sourceId);
+
+        void ClearAllRuntimeOverrides(string mapId);
 
         /// <summary>
         /// 设置某个来源对 cell 的运行时覆盖。

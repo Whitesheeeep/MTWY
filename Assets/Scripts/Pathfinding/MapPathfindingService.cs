@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using GameData;
 using UnityEngine;
 using WS_Modules.DataStructure;
@@ -31,6 +32,29 @@ namespace Pathfinding
         /// </summary>
         public static bool TryFindPath(Vector3Int startCell, Vector3Int targetCell, List<Vector3Int> pathCells)
         {
+            if (!TryGetCurrentMapGrid(out MapGridManager mapGrid, out string mapId))
+            {
+                if (pathCells == null)
+                {
+                    throw new ArgumentNullException(nameof(pathCells));
+                }
+
+                pathCells.Clear();
+                return false;
+            }
+
+            return TryFindLoadedPath(mapId, startCell, targetCell, pathCells);
+        }
+
+        /// <summary>
+        /// Ensures a map is cached, then finds an eight-direction path between two grid cells on that map.
+        /// </summary>
+        public static async UniTask<bool> TryFindPathAsync(
+            string mapId,
+            Vector3Int startCell,
+            Vector3Int targetCell,
+            List<Vector3Int> pathCells)
+        {
             if (pathCells == null)
             {
                 throw new ArgumentNullException(nameof(pathCells));
@@ -38,12 +62,40 @@ namespace Pathfinding
 
             pathCells.Clear();
 
-            if (!TryGetMapGrid(out IMapGridDatabase mapGrid))
+            MapGridManager mapGrid = MapGridManager.Instance;
+            if (!await mapGrid.EnsureLoadedAsync(mapId))
             {
                 return false;
             }
 
-            if (!mapGrid.IsWalkable(startCell) || !mapGrid.IsWalkable(targetCell))
+            return TryFindLoadedPath(mapId, startCell, targetCell, pathCells);
+        }
+
+        /// <summary>
+        /// Finds an eight-direction path on a map that is already loaded in MapGridDatabase.
+        /// </summary>
+        public static bool TryFindLoadedPath(
+            string mapId,
+            Vector3Int startCell,
+            Vector3Int targetCell,
+            List<Vector3Int> pathCells)
+        {
+            if (pathCells == null)
+            {
+                throw new ArgumentNullException(nameof(pathCells));
+            }
+
+            pathCells.Clear();
+
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                return false;
+            }
+
+            MapGridManager mapGrid = MapGridManager.Instance;
+            if (!mapGrid.IsLoaded(mapId) ||
+                !mapGrid.IsWalkable(mapId, startCell) ||
+                !mapGrid.IsWalkable(mapId, targetCell))
             {
                 return false;
             }
@@ -81,7 +133,7 @@ namespace Pathfinding
                 closedSet.Add(current);
                 int currentGScore = gScore[current];
 
-                foreach (Vector3Int neighbor in GetWalkableNeighbors(mapGrid, current))
+                foreach (Vector3Int neighbor in GetWalkableNeighbors(mapGrid, mapId, current))
                 {
                     if (closedSet.Contains(neighbor))
                     {
@@ -119,7 +171,7 @@ namespace Pathfinding
 
             worldPath.Clear();
 
-            if (!TryGetMapGrid(out IMapGridDatabase mapGrid))
+            if (!TryGetMapGrid(out MapGridManager mapGrid))
             {
                 return false;
             }
@@ -140,27 +192,30 @@ namespace Pathfinding
             return true;
         }
 
-        private static bool TryGetMapGrid(out IMapGridDatabase mapGrid)
+        private static bool TryGetCurrentMapGrid(out MapGridManager mapGrid, out string mapId)
         {
-            if (!GameDatabase.TryGet(out mapGrid))
-            {
-                return false;
-            }
+            mapGrid = MapGridManager.Instance;
+            mapId = mapGrid.CurrentMapId;
+            return mapGrid.CurrentMapData != null && !string.IsNullOrWhiteSpace(mapId);
+        }
 
+        private static bool TryGetMapGrid(out MapGridManager mapGrid)
+        {
+            mapGrid = MapGridManager.Instance;
             return mapGrid.CurrentMapData != null && mapGrid.HasCurrentGrid;
         }
 
-        private static IEnumerable<Vector3Int> GetWalkableNeighbors(IMapGridDatabase mapGrid, Vector3Int current)
+        private static IEnumerable<Vector3Int> GetWalkableNeighbors(MapGridManager mapGrid, string mapId, Vector3Int current)
         {
             foreach (Vector2Int offset in NeighborOffsets)
             {
                 Vector3Int neighbor = new Vector3Int(current.x + offset.x, current.y + offset.y, current.z);
-                if (!mapGrid.IsWalkable(neighbor))
+                if (!mapGrid.IsWalkable(mapId, neighbor))
                 {
                     continue;
                 }
 
-                if (IsDiagonal(offset) && !CanMoveDiagonally(mapGrid, current, offset))
+                if (IsDiagonal(offset) && !CanMoveDiagonally(mapGrid, mapId, current, offset))
                 {
                     continue;
                 }
@@ -169,11 +224,11 @@ namespace Pathfinding
             }
         }
 
-        private static bool CanMoveDiagonally(IMapGridDatabase mapGrid, Vector3Int current, Vector2Int offset)
+        private static bool CanMoveDiagonally(MapGridManager mapGrid, string mapId, Vector3Int current, Vector2Int offset)
         {
             Vector3Int horizontal = new Vector3Int(current.x + offset.x, current.y, current.z);
             Vector3Int vertical = new Vector3Int(current.x, current.y + offset.y, current.z);
-            return mapGrid.IsWalkable(horizontal) && mapGrid.IsWalkable(vertical);
+            return mapGrid.IsWalkable(mapId, horizontal) && mapGrid.IsWalkable(mapId, vertical);
         }
 
         private static bool IsDiagonal(Vector2Int offset)

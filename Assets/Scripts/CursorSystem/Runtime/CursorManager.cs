@@ -203,7 +203,8 @@ namespace CursorSystem
             out MapGridCellInfo cellInfo)
         {
             cellInfo = default;
-            if (!GameDatabase.TryGet(out IMapGridDatabase mapGrid) || !mapGrid.TryGetCell(targetCell, out cellInfo))
+            MapGridManager mapGrid = MapGridManager.Instance;
+            if (!mapGrid.TryGetCell(targetCell, out cellInfo))
             {
                 return false;
             }
@@ -221,7 +222,8 @@ namespace CursorSystem
             targetCell = Vector3Int.zero;
             inToolRange = false;
 
-            if (rangeOrigin == null || !GameDatabase.TryGet(out IMapGridDatabase mapGrid) || !mapGrid.HasCurrentGrid)
+            MapGridManager mapGrid = MapGridManager.Instance;
+            if (rangeOrigin == null || !mapGrid.HasCurrentGrid)
             {
                 return false;
             }

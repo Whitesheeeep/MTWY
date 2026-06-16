@@ -298,6 +298,8 @@ GameObject:
   m_Component:
   - component: {fileID: 51198621}
   - component: {fileID: 51198620}
+  - component: {fileID: 51198623}
+  - component: {fileID: 51198622}
   m_Layer: 0
   m_Name: TileMap
   m_TagString: Untagged
@@ -344,6 +346,56 @@ Transform:
   - {fileID: 135543477}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &51198622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51198619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae0d5c20091138949a2802a5038f8ed2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mapId: 02_Home_01
+  outputData: {fileID: 11400000, guid: 1d7646c2135304c4ab3e825dc777a1c5, type: 2}
+  layers:
+  - tilemap: {fileID: 1097440400}
+    flags: 4
+    affectsBounds: 1
+  - tilemap: {fileID: 838262897}
+    flags: 2
+    affectsBounds: 1
+  - tilemap: {fileID: 1886790461}
+    flags: 1
+    affectsBounds: 1
+  - tilemap: {fileID: 782065401}
+    flags: 4
+    affectsBounds: 1
+  - tilemap: {fileID: 125123852}
+    flags: 8
+    affectsBounds: 1
+  - tilemap: {fileID: 1128663492}
+    flags: 16
+    affectsBounds: 1
+  - tilemap: {fileID: 2136624357}
+    flags: 32
+    affectsBounds: 1
+--- !u!114 &51198623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51198619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0605a03731aaa734d99a3bcbe828fcab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mapGridData: {fileID: 11400000, guid: 1d7646c2135304c4ab3e825dc777a1c5, type: 2}
+  grid: {fileID: 51198620}
 --- !u!1 &125123849
 GameObject:
   m_ObjectHideFlags: 0
@@ -10645,7 +10697,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1984189119}
   - component: {fileID: 1984189121}
-  - component: {fileID: 1984189120}
+  - component: {fileID: 1984189122}
   m_Layer: 0
   m_Name: DoorCollider
   m_TagString: Untagged
@@ -10668,22 +10720,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3698253583505596378}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1984189120
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1984189118}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b0cb06225264aeab8fa94d2ce8fcb87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  travelerLayerMask:
-    serializedVersion: 2
-    m_Bits: 256
-  routeId: 01_MainScene_Home
 --- !u!61 &1984189121
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -10729,6 +10765,22 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 2.8646832, y: 1.5231848}
   m_EdgeRadius: 0
+--- !u!114 &1984189122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1984189118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f1ca21c1d125af4db4f25b27b69e3f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  travelerLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  edgeId: Home01_Door_to_MainScene_Home
 --- !u!1 &2136624354
 GameObject:
   m_ObjectHideFlags: 0
@@ -10891,29 +10943,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1000000000240541600}
-  - component: {fileID: 1000000000240541603}
   m_Layer: 0
-  m_Name: SceneSpawnRoot
+  m_Name: SceneTransitionPoints
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1000000000240541603
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000000000240541601}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f0c13f79d4244019fc90e1ee9773a3f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawnEntries:
-  - targetSpawnId: Door
-    spawnTransform: {fileID: 5475128046051554947}
 --- !u!1 &1684656880463560177
 GameObject:
   m_ObjectHideFlags: 0

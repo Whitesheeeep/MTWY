@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
 namespace GameData
 {
     /// <summary>
@@ -29,5 +33,18 @@ namespace GameData
         /// 查询时要从格子最终属性中移除的 flags。
         /// </summary>
         public MapGridCellFlags RemoveFlags { get; }
+    }
+
+    /// <summary>
+    /// Portable runtime override request saved or submitted by gameplay systems.
+    /// </summary>
+    [Serializable]
+    public struct MapGridRuntimeOverrideRecord
+    {
+        public string mapId;
+        public string sourceId;
+        public List<Vector3Int> occupiedCells;
+        public MapGridCellFlags addFlags;
+        public MapGridCellFlags removeFlags;
     }
 }

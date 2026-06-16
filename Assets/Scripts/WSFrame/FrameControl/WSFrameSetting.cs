@@ -2,7 +2,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 using WS_Modules.Pooling;
-using WS_Modules.SceneModule;
 using WS_Modules.UIModule;
 
 #if UNITY_EDITOR
@@ -30,21 +29,6 @@ namespace WS_Modules
 
         [SerializeField, LabelText("对象池设置")]
         private PoolingSetting poolingSetting = new PoolingSetting();
-
-        [SerializeField, LabelText("场景转换设置")]
-        private SceneTransitionSetting sceneTransitionSetting = new SceneTransitionSetting();
-
-        /// <summary>
-        /// 场景转换系统设置。
-        /// </summary>
-        public SceneTransitionSetting SceneTransitionSettings
-        {
-            get
-            {
-                sceneTransitionSetting ??= new SceneTransitionSetting();
-                return sceneTransitionSetting;
-            }
-        }
 
         public PoolingSetting PoolingSettings
         {
@@ -185,22 +169,6 @@ namespace WS_Modules
             {
                 ResLoadType = loadType;
             }
-        }
-
-        /// <summary>
-        /// SceneTransitionSystem 的全局配置。
-        /// </summary>
-        [Serializable]
-        public class SceneTransitionSetting
-        {
-            [SerializeField]
-            [LabelText("Transition Config")]
-            private SceneTransitionConfig transitionConfig;
-
-            /// <summary>
-            /// 全局场景转换 Route 配置资产。
-            /// </summary>
-            public SceneTransitionConfig TransitionConfig => transitionConfig;
         }
 
         [Serializable]

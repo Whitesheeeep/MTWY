@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using WS_Modules.ResLoadModule;
 
 namespace GameData
 {
     /// <summary>
-    /// 地图 Grid 运行时数据库，负责把 MapGridData_SO 转成可 O(1) 查询的一维数组索引。
+    /// Multi-map data aggregate. Pinned maps are kept outside the LRU cache; unpinned maps are cached by LRU.
     /// </summary>
     public sealed class MapGridDatabase : IMapGridDatabase
     {
@@ -29,24 +31,100 @@ namespace GameData
             new Vector3Int(-1, 1, 0)
         };
 
-        private readonly Dictionary<Vector3Int, List<MapGridRuntimeOverride>> runtimeOverrides =
-            new Dictionary<Vector3Int, List<MapGridRuntimeOverride>>();
+        private readonly MapGridMapCache mapCache;
+        private readonly MapGridCatalog_SO catalog;
 
-        private MapGridCellData[] cells = Array.Empty<MapGridCellData>();
-        private MapGridData_SO loadedMapData;
+        private string currentMapId = string.Empty;
         private Grid currentGrid;
-        private Vector3Int originCell;
-        private int width;
-        private int height;
 
-        public string CurrentMapId => loadedMapData != null ? loadedMapData.mapId : string.Empty;
-        public MapGridData_SO CurrentMapData => loadedMapData;
+        public MapGridDatabase(MapGridCatalog_SO catalog = null)
+        {
+            this.catalog = catalog;
+            mapCache = new MapGridMapCache(GetMaxCachedMaps());
+            mapCache.CapacityExceeded += TrimLruCacheIfNeeded;
+        }
+
+        public string CurrentMapId => currentMapId;
+        public MapGridData_SO CurrentMapData => TryGetCurrentState(out MapGridMapState state)
+            ? state.staticModule.LoadedMapData
+            : null;
         public Grid CurrentGrid => currentGrid;
         public bool HasCurrentGrid => currentGrid != null;
 
-        /// <summary>
-        /// 加载一张静态地图数据，并重建运行时查询索引。
-        /// </summary>
+        public IReadOnlyList<MapGridLoadedMapDebugInfo> GetLoadedMapDebugInfos()
+        {
+            var results = new List<MapGridLoadedMapDebugInfo>(mapCache.Count);
+            foreach (MapGridMapState state in mapCache.PinnedStates)
+            {
+                results.Add(CreateDebugInfo(state, "Pinned"));
+            }
+
+            foreach (MapGridMapState state in mapCache.LruStates)
+            {
+                results.Add(CreateDebugInfo(state, "LRU"));
+            }
+
+            return results;
+        }
+
+        public async UniTask<bool> EnsureLoadedAsync(string mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                Debug.LogWarning("[MapGridDatabase] Cannot load map because mapId is empty.");
+                return false;
+            }
+
+            if (mapCache.ContainsPinned(mapId))
+            {
+                return true;
+            }
+
+            if (mapCache.TryGet(mapId, out _))
+            {
+                return true;
+            }
+
+            if (!TryGetCatalogEntry(mapId, out MapGridCatalogEntry entry))
+            {
+                Debug.LogWarning($"[MapGridDatabase] MapGridCatalog has no entry for mapId '{mapId}'.");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.resourceKey))
+            {
+                Debug.LogWarning($"[MapGridDatabase] MapGridCatalog entry '{mapId}' has empty resourceKey.");
+                return false;
+            }
+
+            MapGridData_SO mapData;
+            try
+            {
+                mapData = await ResSystem.Instance.LoadAsync<MapGridData_SO>(entry.resourceKey);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                return false;
+            }
+
+            if (mapData == null)
+            {
+                Debug.LogWarning($"[MapGridDatabase] Failed to load MapGridData_SO. Map:{mapId}, Key:{entry.resourceKey}");
+                return false;
+            }
+
+            MapGridMapState state = CreateState(mapData, entry.resourceKey, true, entry.pinOnLoad);
+            StoreState(state);
+            return true;
+        }
+
+        public bool IsLoaded(string mapId)
+        {
+            return !string.IsNullOrWhiteSpace(mapId) &&
+                   mapCache.Contains(mapId);
+        }
+
         public void LoadMap(MapGridData_SO mapData, Grid grid)
         {
             if (mapData == null)
@@ -59,150 +137,114 @@ namespace GameData
                 throw new ArgumentNullException(nameof(grid));
             }
 
-            if (!mapData.IsValid)
+            string mapId = mapData.mapId;
+            if (string.IsNullOrWhiteSpace(mapId))
             {
-                throw new ArgumentException($"[MapGridDatabase] Invalid map data: {mapData.name}", nameof(mapData));
+                throw new ArgumentException($"[MapGridDatabase] MapGridData has empty mapId: {mapData.name}", nameof(mapData));
             }
 
-            loadedMapData = mapData;
+            MapGridMapState state;
+            if (mapCache.TryGetPinned(mapId, out state))
+            {
+                state.pinFromCurrentScene = true;
+            }
+            else if (mapCache.TryRemoveLru(mapId, out state))
+            {
+                state.pinFromCurrentScene = true;
+                mapCache.SetPinned(state);
+            }
+            else
+            {
+                TryGetCatalogEntry(mapId, out MapGridCatalogEntry entry);
+                state = CreateState(mapData, entry.resourceKey, false, entry.pinOnLoad);
+                state.pinFromCurrentScene = true;
+                mapCache.SetPinned(state);
+            }
+
+            currentMapId = mapId;
             currentGrid = grid;
-            originCell = mapData.originCell;
-            width = mapData.width;
-            height = mapData.height;
-            cells = new MapGridCellData[width * height];
-            runtimeOverrides.Clear();
-
-            // 先填满统一矩形 bounds，保证缺失或旧版本资产不会造成数组空洞。
-            for (int gridY = 0; gridY < height; gridY++)
-            {
-                for (int gridX = 0; gridX < width; gridX++)
-                {
-                    int index = gridY * width + gridX;
-                    cells[index] = new MapGridCellData
-                    {
-                        cellPosition = new Vector3Int(originCell.x + gridX, originCell.y + gridY, originCell.z),
-                        gridX = gridX,
-                        gridY = gridY,
-                        staticFlags = MapGridCellFlags.None
-                    };
-                }
-            }
-
-            // 再用 Bake 结果覆盖默认格子。
-            foreach (MapGridCellData cellData in mapData.cells)
-            {
-                if (!TryGetIndex(cellData.cellPosition, out int index))
-                {
-                    Debug.LogWarning($"[MapGridDatabase] Cell skipped because it is outside bounds. Map:{mapData.mapId}, Cell:{cellData.cellPosition}");
-                    continue;
-                }
-
-                cells[index] = cellData;
-            }
         }
 
-        /// <summary>
-        /// 卸载当前地图，并清空所有运行时状态。
-        /// </summary>
         public void UnloadCurrentMap()
         {
-            loadedMapData = null;
+            string mapId = currentMapId;
+            if (!string.IsNullOrWhiteSpace(mapId))
+            {
+                if (mapCache.TryGetPinned(mapId, out MapGridMapState state))
+                {
+                    state.pinFromCurrentScene = false;
+                    if (!state.IsPinned)
+                    {
+                        mapCache.LruCapacity = GetMaxCachedMaps();
+                        mapCache.SetLru(state);
+                    }
+                }
+                else if (mapCache.ContainsLru(mapId))
+                {
+                    Debug.LogError($"[MapGridDatabase] Current map '{mapId}' was found in LRU cache. Current maps must be pinned.");
+                }
+            }
+
+            currentMapId = string.Empty;
             currentGrid = null;
-            originCell = Vector3Int.zero;
-            width = 0;
-            height = 0;
-            cells = Array.Empty<MapGridCellData>();
-            runtimeOverrides.Clear();
         }
 
-        /// <summary>
-        /// 使用当前持有的 MapGridData_SO 重建索引。
-        /// </summary>
         public void ReloadCurrentMap()
         {
-            if (loadedMapData == null)
+            if (!TryGetCurrentState(out MapGridMapState state) || currentGrid == null)
             {
                 return;
             }
 
-            if (currentGrid == null)
-            {
-                throw new InvalidOperationException("[MapGridDatabase] Cannot reload current map because CurrentGrid is null.");
-            }
-
-            LoadMap(loadedMapData, currentGrid);
+            state.staticModule.Load(state.staticModule.LoadedMapData);
         }
 
-        /// <summary>
-        /// 将 cell 坐标转换为当前 Grid 中的世界中心点。
-        /// </summary>
         public Vector3 GetCellCenterWorld(Vector3Int cell)
         {
             EnsureCurrentGrid();
             return currentGrid.GetCellCenterWorld(cell);
         }
 
-        /// <summary>
-        /// 将世界坐标转换为当前 Grid 中的 cell 坐标。
-        /// </summary>
         public Vector3Int WorldToCell(Vector3 worldPosition)
         {
             EnsureCurrentGrid();
             return currentGrid.WorldToCell(worldPosition);
         }
 
-        /// <summary>
-        /// 在当前地图中查询格子。
-        /// </summary>
         public bool TryGetCell(Vector3Int cell, out MapGridCellInfo info)
         {
             return TryGetCell(CurrentMapId, cell, out info);
         }
 
-        /// <summary>
-        /// 查询指定地图中的格子。第一版只接受当前地图 ID。
-        /// </summary>
         public bool TryGetCell(string mapId, Vector3Int cell, out MapGridCellInfo info)
         {
-            info = new MapGridCellInfo();
-            if (!IsCurrentMap(mapId) || !TryGetIndex(cell, out int index))
+            info = default;
+            if (!TryGetState(mapId, out MapGridMapState state) ||
+                !state.staticModule.TryGetCellData(cell, out MapGridCellData cellData))
             {
                 return false;
             }
 
-            MapGridCellData cellData = cells[index];
-            MapGridCellFlags finalFlags = ApplyRuntimeOverrides(cell, cellData.staticFlags);
+            MapGridCellFlags finalFlags = state.overrideModule.Apply(cell, cellData.staticFlags);
             info = new MapGridCellInfo(cellData.cellPosition, cellData.gridX, cellData.gridY, cellData.staticFlags, finalFlags);
             return true;
         }
 
-        /// <summary>
-        /// 判断当前地图中的格子是否包含指定属性。
-        /// </summary>
         public bool HasFlag(Vector3Int cell, MapGridCellFlags flag)
         {
             return HasFlag(CurrentMapId, cell, flag);
         }
 
-        /// <summary>
-        /// 判断指定地图中的格子是否包含指定属性。
-        /// </summary>
         public bool HasFlag(string mapId, Vector3Int cell, MapGridCellFlags flag)
         {
             return TryGetCell(mapId, cell, out MapGridCellInfo info) && (info.FinalFlags & flag) == flag;
         }
 
-        /// <summary>
-        /// 判断当前地图中的格子是否可通行。
-        /// </summary>
         public bool IsWalkable(Vector3Int cell)
         {
             return IsWalkable(CurrentMapId, cell);
         }
 
-        /// <summary>
-        /// 判断指定地图中的格子是否可通行。
-        /// </summary>
         public bool IsWalkable(string mapId, Vector3Int cell)
         {
             if (!TryGetCell(mapId, cell, out MapGridCellInfo info))
@@ -215,17 +257,11 @@ namespace GameData
             return (info.FinalFlags & BlockingFlags) == MapGridCellFlags.None;
         }
 
-        /// <summary>
-        /// 获取当前地图中可通行的邻居格子。
-        /// </summary>
         public IEnumerable<Vector3Int> GetNeighbors(Vector3Int cell, bool includeDiagonal = false)
         {
             return GetNeighbors(CurrentMapId, cell, includeDiagonal);
         }
 
-        /// <summary>
-        /// 获取指定地图中可通行的邻居格子。
-        /// </summary>
         public IEnumerable<Vector3Int> GetNeighbors(string mapId, Vector3Int cell, bool includeDiagonal = false)
         {
             Vector3Int[] directions = includeDiagonal ? EightDirections : FourDirections;
@@ -239,10 +275,17 @@ namespace GameData
             }
         }
 
-        /// <summary>
-        /// 设置运行时覆盖。相同 sourceId 在同一 cell 上只保留最新一条。
-        /// </summary>
         public void SetRuntimeOverride(
+            string sourceId,
+            Vector3Int cell,
+            MapGridCellFlags addFlags,
+            MapGridCellFlags removeFlags = MapGridCellFlags.None)
+        {
+            SetRuntimeOverride(CurrentMapId, sourceId, cell, addFlags, removeFlags);
+        }
+
+        public void SetRuntimeOverride(
+            string mapId,
             string sourceId,
             Vector3Int cell,
             MapGridCellFlags addFlags,
@@ -253,145 +296,200 @@ namespace GameData
                 throw new ArgumentException("[MapGridDatabase] Runtime override sourceId is empty.", nameof(sourceId));
             }
 
-            if (!TryGetIndex(cell, out _))
+            if (!TryGetState(mapId, out MapGridMapState state))
             {
-                Debug.LogWarning($"[MapGridDatabase] Runtime override ignored because cell is outside current map. Source:{sourceId}, Cell:{cell}");
+                Debug.LogWarning($"[MapGridDatabase] Runtime override ignored because map is not loaded. Map:{mapId}, Source:{sourceId}");
                 return;
             }
 
-            if (!runtimeOverrides.TryGetValue(cell, out List<MapGridRuntimeOverride> overrides))
+            if (!state.staticModule.ContainsCell(cell))
             {
-                overrides = new List<MapGridRuntimeOverride>();
-                runtimeOverrides.Add(cell, overrides);
+                Debug.LogWarning($"[MapGridDatabase] Runtime override ignored because cell is outside map. Map:{mapId}, Source:{sourceId}, Cell:{cell}");
+                return;
             }
 
-            overrides.RemoveAll(item => item.SourceId == sourceId);
-            overrides.Add(new MapGridRuntimeOverride(sourceId, addFlags, removeFlags));
+            state.overrideModule.SetOverride(sourceId, cell, addFlags, removeFlags);
         }
 
-        /// <summary>
-        /// 清除某个来源在指定 cell 上的覆盖。
-        /// </summary>
         public void ClearRuntimeOverride(string sourceId, Vector3Int cell)
         {
-            if (string.IsNullOrWhiteSpace(sourceId) || !runtimeOverrides.TryGetValue(cell, out List<MapGridRuntimeOverride> overrides))
-            {
-                return;
-            }
+            ClearRuntimeOverride(CurrentMapId, sourceId, cell);
+        }
 
-            overrides.RemoveAll(item => item.SourceId == sourceId);
-            if (overrides.Count == 0)
+        public void ClearRuntimeOverride(string mapId, string sourceId, Vector3Int cell)
+        {
+            if (TryGetState(mapId, out MapGridMapState state))
             {
-                runtimeOverrides.Remove(cell);
+                state.overrideModule.ClearOverride(sourceId, cell);
             }
         }
 
-        /// <summary>
-        /// 清除某个来源在当前地图所有 cell 上的覆盖。
-        /// </summary>
         public void ClearRuntimeOverrides(string sourceId)
         {
-            if (string.IsNullOrWhiteSpace(sourceId))
-            {
-                return;
-            }
+            ClearRuntimeOverrides(CurrentMapId, sourceId);
+        }
 
-            List<Vector3Int> emptyCells = null;
-            foreach (KeyValuePair<Vector3Int, List<MapGridRuntimeOverride>> pair in runtimeOverrides)
+        public void ClearRuntimeOverrides(string mapId, string sourceId)
+        {
+            if (TryGetState(mapId, out MapGridMapState state))
             {
-                pair.Value.RemoveAll(item => item.SourceId == sourceId);
-                if (pair.Value.Count == 0)
-                {
-                    if (emptyCells == null)
-                    {
-                        emptyCells = new List<Vector3Int>();
-                    }
-
-                    emptyCells.Add(pair.Key);
-                }
-            }
-
-            if (emptyCells == null)
-            {
-                return;
-            }
-
-            foreach (Vector3Int cell in emptyCells)
-            {
-                runtimeOverrides.Remove(cell);
+                state.overrideModule.ClearOverrides(sourceId);
             }
         }
 
-        /// <summary>
-        /// 清除当前地图的全部运行时覆盖。
-        /// </summary>
         public void ClearAllRuntimeOverrides()
         {
-            runtimeOverrides.Clear();
+            ClearAllRuntimeOverrides(CurrentMapId);
         }
 
-        /// <summary>
-        /// GameDatabase 清理入口。
-        /// </summary>
+        public void ClearAllRuntimeOverrides(string mapId)
+        {
+            if (TryGetState(mapId, out MapGridMapState state))
+            {
+                state.overrideModule.ClearAll();
+            }
+        }
+
         public void Clear()
         {
-            UnloadCurrentMap();
+            foreach (MapGridMapState state in mapCache.PinnedStates)
+            {
+                UnloadStateResource(state);
+            }
+
+            while (mapCache.TryRemoveLeastRecentlyUsed(out _, out MapGridMapState state))
+            {
+                UnloadStateResource(state);
+            }
+
+            mapCache.Clear();
+            currentMapId = string.Empty;
+            currentGrid = null;
         }
 
-        /// <summary>
-        /// 把 Unity cell 坐标转换成一维数组索引。
-        /// </summary>
-        private bool TryGetIndex(Vector3Int cell, out int index)
+        private MapGridMapState CreateState(
+            MapGridData_SO mapData,
+            string resourceKey,
+            bool loadedFromCatalog,
+            bool pinFromCatalog)
         {
-            int gridX = cell.x - originCell.x;
-            int gridY = cell.y - originCell.y;
-            if (gridX < 0 || gridX >= width || gridY < 0 || gridY >= height)
+            var state = new MapGridMapState
             {
-                index = -1;
+                mapId = mapData.mapId,
+                resourceKey = resourceKey,
+                loadedFromCatalog = loadedFromCatalog,
+                staticModule = new MapGridStaticModule(),
+                overrideModule = new MapGridRuntimeOverrideModule(),
+                pinFromCatalog = pinFromCatalog
+            };
+
+            state.staticModule.Load(mapData);
+            return state;
+        }
+
+        private void StoreState(MapGridMapState state)
+        {
+            mapCache.LruCapacity = GetMaxCachedMaps();
+            mapCache.Store(state);
+        }
+
+        private static MapGridLoadedMapDebugInfo CreateDebugInfo(MapGridMapState state, string cacheKind)
+        {
+            MapGridStaticModule staticModule = state.staticModule;
+            MapGridData_SO mapData = staticModule.LoadedMapData;
+            return new MapGridLoadedMapDebugInfo(
+                state.mapId,
+                cacheKind,
+                mapData != null ? mapData.name : string.Empty,
+                state.resourceKey,
+                state.loadedFromCatalog,
+                state.pinFromCurrentScene,
+                state.pinFromCatalog,
+                staticModule.OriginCell,
+                staticModule.Width,
+                staticModule.Height,
+                staticModule.Cells != null ? staticModule.Cells.Length : 0,
+                state.overrideModule.OverrideCellCount,
+                state.overrideModule.OverrideRecordCount);
+        }
+
+        private void TrimLruCacheIfNeeded(MapGridMapCache cache)
+        {
+            if (cache.LruCapacity <= 0)
+            {
+                return;
+            }
+
+            while (cache.LruCount > cache.LruCapacity)
+            {
+                if (!cache.TryRemoveLeastRecentlyUsed(out string mapId, out MapGridMapState state))
+                {
+                    return;
+                }
+
+                if (string.Equals(mapId, currentMapId, StringComparison.Ordinal))
+                {
+                    Debug.LogError($"[MapGridDatabase] Current map '{mapId}' was evicted from LRU. Current maps must never be stored in LRU.");
+                }
+
+                UnloadStateResource(state);
+            }
+        }
+
+        private void UnloadStateResource(MapGridMapState state)
+        {
+            if (state.loadedFromCatalog && !string.IsNullOrWhiteSpace(state.resourceKey))
+            {
+                ResSystem.Instance.UnLoad<MapGridData_SO>(state.resourceKey);
+            }
+        }
+
+        private bool TryGetCurrentState(out MapGridMapState state)
+        {
+            return TryGetState(CurrentMapId, out state);
+        }
+
+        private bool TryGetState(string mapId, out MapGridMapState state)
+        {
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                state = null;
                 return false;
             }
 
-            index = gridY * width + gridX;
-            return true;
+            return mapCache.TryGet(mapId, out state);
         }
 
-        /// <summary>
-        /// 判断查询的地图 ID 是否为当前已加载地图。
-        /// </summary>
-        private bool IsCurrentMap(string mapId)
+        private bool TryGetCatalogEntry(string mapId, out MapGridCatalogEntry entry)
         {
-            return loadedMapData != null && string.Equals(loadedMapData.mapId, mapId, StringComparison.Ordinal);
+            if (catalog != null && catalog.entries != null)
+            {
+                for (int i = 0; i < catalog.entries.Count; i++)
+                {
+                    MapGridCatalogEntry candidate = catalog.entries[i];
+                    if (string.Equals(candidate.mapId, mapId, StringComparison.Ordinal))
+                    {
+                        entry = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            entry = default;
+            return false;
         }
 
-        /// <summary>
-        /// 确认当前存在 Grid，坐标转换接口依赖它。
-        /// </summary>
+        private int GetMaxCachedMaps()
+        {
+            return catalog != null && catalog.maxCachedMaps > 0 ? catalog.maxCachedMaps : 4;
+        }
+
         private void EnsureCurrentGrid()
         {
             if (currentGrid == null)
             {
                 throw new InvalidOperationException("[MapGridDatabase] CurrentGrid is null. Load a map with a Grid before converting coordinates.");
             }
-        }
-
-        /// <summary>
-        /// 将所有运行时覆盖叠加到静态属性上，得到最终查询属性。
-        /// </summary>
-        private MapGridCellFlags ApplyRuntimeOverrides(Vector3Int cell, MapGridCellFlags staticFlags)
-        {
-            if (!runtimeOverrides.TryGetValue(cell, out List<MapGridRuntimeOverride> overrides))
-            {
-                return staticFlags;
-            }
-
-            MapGridCellFlags finalFlags = staticFlags;
-            foreach (MapGridRuntimeOverride runtimeOverride in overrides)
-            {
-                finalFlags |= runtimeOverride.AddFlags;
-                finalFlags &= ~runtimeOverride.RemoveFlags;
-            }
-
-            return finalFlags;
         }
     }
 }
