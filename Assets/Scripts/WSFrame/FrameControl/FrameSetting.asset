@@ -38,7 +38,7 @@ MonoBehaviour:
     BindComponentGeneratorPath: Assets/Scripts/WSFrame/UISystem/WindowDataComponent
     BindComponentNameSpace: WS_Modules.UIModule
     WindowGeneratorPath: Assets/Scripts/WSFrame/UISystem/WindowCode
-    ItemScriptsGeneratorPath: Assets/Scripts/WSFrame/UISystem/Test
+    ItemScriptsGeneratorPath: Assets/Scripts/WSFrame/UISystem/ItemUI
     WindowPrefabFolderPathArr:
     - Assets/Prefabs/UI/WindowPrefab
     UsingNameSpaceArr:

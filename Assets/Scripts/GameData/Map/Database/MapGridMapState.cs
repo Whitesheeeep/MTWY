@@ -1,5 +1,21 @@
 namespace GameData
 {
+    public sealed class MapGridMapState
+    {
+        public string mapId;
+        public string resourceKey;
+        public bool loadedFromCatalog;
+        public MapGridStaticModule staticModule;
+        public MapGridRuntimeOverrideModule overrideModule;
+        public bool pinFromCurrentScene;
+        public bool pinFromCatalog;
+
+        public bool IsPinned => pinFromCurrentScene || pinFromCatalog;
+    }
+
+#if UNITY_EDITOR
+    #region Editor Debug
+
     public readonly struct MapGridLoadedMapDebugInfo
     {
         public MapGridLoadedMapDebugInfo(
@@ -47,16 +63,6 @@ namespace GameData
         public int OverrideRecordCount { get; }
     }
 
-    public sealed class MapGridMapState
-    {
-        public string mapId;
-        public string resourceKey;
-        public bool loadedFromCatalog;
-        public MapGridStaticModule staticModule;
-        public MapGridRuntimeOverrideModule overrideModule;
-        public bool pinFromCurrentScene;
-        public bool pinFromCatalog;
-
-        public bool IsPinned => pinFromCurrentScene || pinFromCatalog;
-    }
+    #endregion
+#endif
 }

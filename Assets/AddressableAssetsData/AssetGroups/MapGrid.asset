@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
   m_Name: MapGrid
   m_EditorClassIdentifier: 
-  m_GroupName: Packed Assets
+  m_GroupName: MapGrid
   m_Data:
     m_SerializedData: []
   m_GUID: 34a5aa4a6b76e48409ef4257a8661e45

@@ -524,6 +524,72 @@ MonoBehaviour:
   m_CameraActivatedEvent:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &300533865
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 300533867}
+  - component: {fileID: 300533866}
+  m_Layer: 0
+  m_Name: MapGridCacheOdinTester
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &300533866
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300533865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f2b87b2f00f8be409f052e668cb686a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  testMapId: 01_MainScene
+  mapGridData: {fileID: 11400000, guid: 8ce2711c88f9c684dbdbf65fb95caead, type: 2}
+  grid: {fileID: 0}
+  testMaps:
+  - mapId: 01_MainScene
+    mapGridData: {fileID: 11400000, guid: 8ce2711c88f9c684dbdbf65fb95caead, type: 2}
+    grid: {fileID: 0}
+    sampleCell: {x: -19, y: -38, z: 0}
+  - mapId: 02_Home_01
+    mapGridData: {fileID: 11400000, guid: 1d7646c2135304c4ab3e825dc777a1c5, type: 2}
+    grid: {fileID: 0}
+    sampleCell: {x: -19, y: -38, z: 0}
+  keepLastLoadedMapAsCurrent: 0
+  queryMapId: 01_MainScene
+  queryCell: {x: -19, y: -38, z: 0}
+  includeDiagonalNeighbors: 0
+  overrideMapId: 01_MainScene
+  overrideSourceId: ManualTest:001
+  overrideCells:
+  - {x: -19, y: -38, z: 0}
+  addFlags: 1
+  removeFlags: 0
+--- !u!4 &300533867
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300533865}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &362784681
 GameObject:
   m_ObjectHideFlags: 0
@@ -633,6 +699,7 @@ GameObject:
   - component: {fileID: 410271453}
   - component: {fileID: 410271455}
   - component: {fileID: 410271454}
+  - component: {fileID: 410271456}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -715,6 +782,43 @@ MonoBehaviour:
   fallbackToDebugTime: 1
   debugCurrentDay: 0
   debugCurrentHour: 0
+--- !u!114 &410271456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410271451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f2b87b2f00f8be409f052e668cb686a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  testMapId: Test_Map_01
+  mapGridData: {fileID: 0}
+  grid: {fileID: 0}
+  testMaps:
+  - mapId: Test_Map
+    mapGridData: {fileID: 11400000, guid: 8ce2711c88f9c684dbdbf65fb95caead, type: 2}
+    grid: {fileID: 0}
+    sampleCell: {x: 0, y: 0, z: 0}
+  - mapId: Test_Map
+    mapGridData: {fileID: 0}
+    grid: {fileID: 0}
+    sampleCell: {x: 0, y: 0, z: 0}
+  - mapId: Test_Map
+    mapGridData: {fileID: 0}
+    grid: {fileID: 0}
+    sampleCell: {x: 0, y: 0, z: 0}
+  keepLastLoadedMapAsCurrent: 0
+  queryMapId: Test_Map_01
+  queryCell: {x: 0, y: 0, z: 0}
+  includeDiagonalNeighbors: 0
+  overrideMapId: Test_Map_01
+  overrideSourceId: ManualTest:001
+  overrideCells: []
+  addFlags: 1
+  removeFlags: 0
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -2196,3 +2300,4 @@ SceneRoots:
   - {fileID: 362784682}
   - {fileID: 900100000000000001}
   - {fileID: 1188560614}
+  - {fileID: 300533867}

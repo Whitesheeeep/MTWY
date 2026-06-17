@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+#region MapGrid Cache Odin Tester
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -18,7 +20,7 @@ namespace GameData
         {
             [LabelText("测试 MapId")] public string mapId = "Test_Map";
             [LabelText("地图 SO")] public MapGridData_SO mapGridData;
-            [LabelText("场景 Grid")] public Grid grid;
+            [LabelText("场景 Grid，可选")] public Grid grid;
             [LabelText("示例 Cell")] public Vector3Int sampleCell;
         }
 
@@ -150,17 +152,33 @@ namespace GameData
                     TrySyncMapIdToSo(entry.mapId, entry.mapGridData, out _);
                 }
 
-                if (!TryValidateMapData(entry.mapGridData, entry.grid, out string failureReason))
+                if (!TryValidateMapData(entry.mapGridData, out string failureReason))
                 {
                     builder.AppendLine($"[{i}] 失败：{failureReason}");
                     continue;
                 }
 
-                MapGridManager.Instance.LoadCurrentMap(entry.mapGridData, entry.grid);
-                successCount++;
-                builder.AppendLine($"[{i}] 加载：mapId={entry.mapGridData.mapId}, asset={entry.mapGridData.name}, grid={entry.grid.name}");
+                bool loaded;
+                if (entry.grid != null)
+                {
+                    MapGridManager.Instance.LoadCurrentMap(entry.mapGridData, entry.grid);
+                    loaded = MapGridManager.Instance.IsLoaded(entry.mapGridData.mapId);
+                }
+                else
+                {
+                    loaded = TryEditorLoadMapDataForTest(entry.mapGridData, out failureReason);
+                }
 
-                bool shouldUnloadCurrent = !keepLastLoadedMapAsCurrent || i < testMaps.Count - 1;
+                if (!loaded)
+                {
+                    builder.AppendLine($"[{i}] 失败：{failureReason}");
+                    continue;
+                }
+
+                successCount++;
+                builder.AppendLine($"[{i}] 加载：mapId={entry.mapGridData.mapId}, asset={entry.mapGridData.name}, grid={(entry.grid != null ? entry.grid.name : "none/static-only")}");
+
+                bool shouldUnloadCurrent = entry.grid != null && (!keepLastLoadedMapAsCurrent || i < testMaps.Count - 1);
                 if (shouldUnloadCurrent)
                 {
                     MapGridManager.Instance.UnloadCurrentMap();
@@ -369,15 +387,26 @@ namespace GameData
 
         private static bool TryValidateMapData(MapGridData_SO targetMapData, Grid targetGrid, out string failureReason)
         {
-            if (targetMapData == null)
+            if (!TryValidateMapData(targetMapData, out failureReason))
             {
-                failureReason = "mapGridData 未赋值";
                 return false;
             }
 
             if (targetGrid == null)
             {
                 failureReason = "grid 未赋值";
+                return false;
+            }
+
+            failureReason = string.Empty;
+            return true;
+        }
+
+        private static bool TryValidateMapData(MapGridData_SO targetMapData, out string failureReason)
+        {
+            if (targetMapData == null)
+            {
+                failureReason = "mapGridData 未赋值";
                 return false;
             }
 
@@ -411,6 +440,30 @@ namespace GameData
             }
 
             GameDatabase.Register<IMapGridDatabase>(new MapGridDatabase());
+        }
+
+        private static bool TryEditorLoadMapDataForTest(MapGridData_SO targetMapData, out string failureReason)
+        {
+            if (!GameDatabase.TryGet(out IMapGridDatabase database))
+            {
+                failureReason = "IMapGridDatabase 未注册";
+                return false;
+            }
+
+            if (database is not MapGridDatabase mapGridDatabase)
+            {
+                failureReason = $"当前数据库类型不是 MapGridDatabase，无法使用 Editor 静态加载。type={database.GetType().Name}";
+                return false;
+            }
+
+            if (!mapGridDatabase.EditorLoadMapDataForTest(targetMapData))
+            {
+                failureReason = $"Editor 静态加载失败。asset={targetMapData.name}, mapId={targetMapData.mapId}";
+                return false;
+            }
+
+            failureReason = string.Empty;
+            return true;
         }
 
         private static string ResolveEntryMapId(TestMapEntry entry)
@@ -508,4 +561,6 @@ namespace GameData
         }
     }
 }
+
+#endregion
 #endif

@@ -51,22 +51,6 @@ namespace GameData
         public Grid CurrentGrid => currentGrid;
         public bool HasCurrentGrid => currentGrid != null;
 
-        public IReadOnlyList<MapGridLoadedMapDebugInfo> GetLoadedMapDebugInfos()
-        {
-            var results = new List<MapGridLoadedMapDebugInfo>(mapCache.Count);
-            foreach (MapGridMapState state in mapCache.PinnedStates)
-            {
-                results.Add(CreateDebugInfo(state, "Pinned"));
-            }
-
-            foreach (MapGridMapState state in mapCache.LruStates)
-            {
-                results.Add(CreateDebugInfo(state, "LRU"));
-            }
-
-            return results;
-        }
-
         public async UniTask<bool> EnsureLoadedAsync(string mapId)
         {
             if (string.IsNullOrWhiteSpace(mapId))
@@ -393,26 +377,6 @@ namespace GameData
             mapCache.Store(state);
         }
 
-        private static MapGridLoadedMapDebugInfo CreateDebugInfo(MapGridMapState state, string cacheKind)
-        {
-            MapGridStaticModule staticModule = state.staticModule;
-            MapGridData_SO mapData = staticModule.LoadedMapData;
-            return new MapGridLoadedMapDebugInfo(
-                state.mapId,
-                cacheKind,
-                mapData != null ? mapData.name : string.Empty,
-                state.resourceKey,
-                state.loadedFromCatalog,
-                state.pinFromCurrentScene,
-                state.pinFromCatalog,
-                staticModule.OriginCell,
-                staticModule.Width,
-                staticModule.Height,
-                staticModule.Cells != null ? staticModule.Cells.Length : 0,
-                state.overrideModule.OverrideCellCount,
-                state.overrideModule.OverrideRecordCount);
-        }
-
         private void TrimLruCacheIfNeeded(MapGridMapCache cache)
         {
             if (cache.LruCapacity <= 0)
@@ -491,5 +455,70 @@ namespace GameData
                 throw new InvalidOperationException("[MapGridDatabase] CurrentGrid is null. Load a map with a Grid before converting coordinates.");
             }
         }
+
+#if UNITY_EDITOR
+        #region Editor Debug
+
+        public IReadOnlyList<MapGridLoadedMapDebugInfo> GetLoadedMapDebugInfos()
+        {
+            var results = new List<MapGridLoadedMapDebugInfo>(mapCache.Count);
+            foreach (MapGridMapState state in mapCache.PinnedStates)
+            {
+                results.Add(CreateDebugInfo(state, "Pinned"));
+            }
+
+            foreach (MapGridMapState state in mapCache.LruStates)
+            {
+                results.Add(CreateDebugInfo(state, "LRU"));
+            }
+
+            return results;
+        }
+
+        public bool EditorLoadMapDataForTest(MapGridData_SO mapData)
+        {
+            if (mapData == null || !mapData.IsValid)
+            {
+                return false;
+            }
+
+            string mapId = mapData.mapId;
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                return false;
+            }
+
+            if (mapCache.Contains(mapId))
+            {
+                return true;
+            }
+
+            MapGridMapState state = CreateState(mapData, string.Empty, false, false);
+            StoreState(state);
+            return true;
+        }
+
+        private static MapGridLoadedMapDebugInfo CreateDebugInfo(MapGridMapState state, string cacheKind)
+        {
+            MapGridStaticModule staticModule = state.staticModule;
+            MapGridData_SO mapData = staticModule.LoadedMapData;
+            return new MapGridLoadedMapDebugInfo(
+                state.mapId,
+                cacheKind,
+                mapData != null ? mapData.name : string.Empty,
+                state.resourceKey,
+                state.loadedFromCatalog,
+                state.pinFromCurrentScene,
+                state.pinFromCatalog,
+                staticModule.OriginCell,
+                staticModule.Width,
+                staticModule.Height,
+                staticModule.Cells != null ? staticModule.Cells.Length : 0,
+                state.overrideModule.OverrideCellCount,
+                state.overrideModule.OverrideRecordCount);
+        }
+
+        #endregion
+#endif
     }
 }

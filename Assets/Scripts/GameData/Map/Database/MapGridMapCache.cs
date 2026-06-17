@@ -34,17 +34,6 @@ namespace GameData
 
         public IEnumerable<MapGridMapState> PinnedStates => pinnedMaps.Values;
 
-        public IEnumerable<MapGridMapState> LruStates
-        {
-            get
-            {
-                foreach (KeyValuePair<string, MapGridMapState> pair in lruMaps.EnumerateMostRecentlyUsed())
-                {
-                    yield return pair.Value;
-                }
-            }
-        }
-
         public bool Contains(string mapId)
         {
             return ContainsPinned(mapId) || ContainsLru(mapId);
@@ -152,5 +141,22 @@ namespace GameData
             pinnedMaps.Clear();
             lruMaps.Clear();
         }
+
+#if UNITY_EDITOR
+        #region Editor Debug
+
+        public IEnumerable<MapGridMapState> LruStates
+        {
+            get
+            {
+                foreach (KeyValuePair<string, MapGridMapState> pair in lruMaps.EnumerateMostRecentlyUsed())
+                {
+                    yield return pair.Value;
+                }
+            }
+        }
+
+        #endregion
+#endif
     }
 }

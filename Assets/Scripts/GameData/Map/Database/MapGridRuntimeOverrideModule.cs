@@ -11,22 +11,6 @@ namespace GameData
         private readonly Dictionary<Vector3Int, List<MapGridRuntimeOverride>> runtimeOverrides =
             new Dictionary<Vector3Int, List<MapGridRuntimeOverride>>();
 
-        public int OverrideCellCount => runtimeOverrides.Count;
-
-        public int OverrideRecordCount
-        {
-            get
-            {
-                int count = 0;
-                foreach (KeyValuePair<Vector3Int, List<MapGridRuntimeOverride>> pair in runtimeOverrides)
-                {
-                    count += pair.Value.Count;
-                }
-
-                return count;
-            }
-        }
-
         public void SetOverride(
             string sourceId,
             Vector3Int cell,
@@ -108,5 +92,27 @@ namespace GameData
 
             return finalFlags;
         }
+
+#if UNITY_EDITOR
+        #region Editor Debug
+
+        public int OverrideCellCount => runtimeOverrides.Count;
+
+        public int OverrideRecordCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (KeyValuePair<Vector3Int, List<MapGridRuntimeOverride>> pair in runtimeOverrides)
+                {
+                    count += pair.Value.Count;
+                }
+
+                return count;
+            }
+        }
+
+        #endregion
+#endif
     }
 }

@@ -43,20 +43,6 @@ namespace WS_Modules.DataStructure
         public int Count => values.Count;
 
         /// <summary>
-        /// 从最近使用到最久未使用枚举缓存内容，不刷新访问顺序。
-        /// </summary>
-        public IEnumerable<KeyValuePair<TKey, TValue>> EnumerateMostRecentlyUsed()
-        {
-            LinkedListNode<TKey> node = list.First;
-            while (node != null)
-            {
-                TKey key = node.Value;
-                yield return new KeyValuePair<TKey, TValue>(key, values[key]);
-                node = node.Next;
-            }
-        }
-
-        /// <summary>
         /// 设置或更新缓存项。
         /// </summary>
         /// <param name="key">缓存键。</param>
@@ -160,6 +146,26 @@ namespace WS_Modules.DataStructure
             nodes.Clear();
             values.Clear();
         }
+
+#if UNITY_EDITOR
+        #region Editor Debug
+
+        /// <summary>
+        /// 从最近使用到最久未使用枚举缓存内容，不刷新访问顺序。
+        /// </summary>
+        public IEnumerable<KeyValuePair<TKey, TValue>> EnumerateMostRecentlyUsed()
+        {
+            LinkedListNode<TKey> node = list.First;
+            while (node != null)
+            {
+                TKey key = node.Value;
+                yield return new KeyValuePair<TKey, TValue>(key, values[key]);
+                node = node.Next;
+            }
+        }
+
+        #endregion
+#endif
 
         private void MoveToMostRecentlyUsed(LinkedListNode<TKey> node)
         {
