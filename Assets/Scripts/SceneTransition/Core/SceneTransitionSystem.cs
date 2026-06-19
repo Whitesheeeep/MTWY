@@ -16,6 +16,7 @@ namespace GameData.SceneTransition
     {
         private const int MaxGridReadyWaitFrames = 120;
 
+        // 存储的是所有边
         private static readonly Dictionary<string, SceneTransitionEdge> edgeMap =
             new Dictionary<string, SceneTransitionEdge>(StringComparer.Ordinal);
 

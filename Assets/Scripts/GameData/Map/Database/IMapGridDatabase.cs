@@ -33,10 +33,14 @@ namespace GameData
 
         bool IsLoaded(string mapId);
 
+        bool TryGetLoadedMapData(string mapId, out MapGridData_SO mapData);
+
+        bool TryGetMapCellSize(string mapId, out Vector3 cellSize);
+
         /// <summary>
-        /// 加载地图数据并重建运行时索引，同时清空 runtime overrides。
+        /// 通过 Catalog/Addressables 加载指定 mapId，并绑定当前场景 Grid。
         /// </summary>
-        void LoadMap(MapGridData_SO mapData, Grid grid);
+        UniTask<bool> LoadCurrentMapAsync(string mapId, Grid grid);
 
         /// <summary>
         /// 卸载当前地图并清空索引和 runtime overrides。

@@ -1,10 +1,12 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Text;
+using Cysharp.Threading.Tasks;
 using GameData;
 using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
+using WS_Modules;
 
 namespace Pathfinding
 {
@@ -15,8 +17,9 @@ namespace Pathfinding
     public sealed class MapPathfindingOdinTester : MonoBehaviour
     {
         [Title("地图数据")]
-        [InfoBox("Edit Mode 下可手动拖入 MapGridData_SO 和场景 Grid 后点击加载测试地图数据；Play Mode 下也可以直接使用运行时已加载的地图。")]
-        [SerializeField] private MapGridData_SO mapGridData = default;
+        [InfoBox("Edit Mode 下可手动填写 mapId 和场景 Grid 后点击加载测试地图数据；Play Mode 下也可以直接使用运行时已加载的地图。")]
+        [SerializeField] private MapGridCatalog_SO catalog = default;
+        [SerializeField, WSScene] private string mapId = "01_MainScene";
         [SerializeField] private Grid grid = default;
 
         [Title("Cell 路径参数")]
@@ -59,14 +62,26 @@ namespace Pathfinding
         [Button("加载测试地图数据", ButtonSizes.Large)]
         public void LoadTestMapData()
         {
+            LoadTestMapDataAsync().Forget();
+        }
+
+        private async UniTaskVoid LoadTestMapDataAsync()
+        {
             if (!TryLoadTestMapData(out string failureReason))
             {
                 SetFailure($"加载测试地图数据失败: {failureReason}");
                 return;
             }
 
-            SetStatus($"加载测试地图数据成功. MapId:{mapGridData.mapId}, Size:{mapGridData.width}x{mapGridData.height}.");
-            Debug.Log($"[MapPathfindingOdinTester] 加载测试地图数据成功 mapId={mapGridData.mapId}, grid={grid.name}");
+            bool loaded = await MapGridManager.Instance.LoadCurrentMapAsync(mapId, grid);
+            if (!loaded)
+            {
+                SetFailure($"加载测试地图数据失败: Catalog/Addressables 未能加载 mapId={mapId}.");
+                return;
+            }
+
+            SetStatus($"加载测试地图数据成功. MapId:{mapId}.");
+            Debug.Log($"[MapPathfindingOdinTester] 加载测试地图数据成功 mapId={mapId}, grid={grid.name}");
         }
 
         /// <summary>
@@ -334,9 +349,9 @@ namespace Pathfinding
 
         private bool TryLoadTestMapData(out string failureReason)
         {
-            if (mapGridData == null)
+            if (string.IsNullOrWhiteSpace(mapId))
             {
-                failureReason = "mapGridData 未赋值.";
+                failureReason = "mapId 未赋值.";
                 return false;
             }
 
@@ -346,19 +361,12 @@ namespace Pathfinding
                 return false;
             }
 
-            if (!mapGridData.IsValid)
-            {
-                failureReason = $"mapGridData 无效: {mapGridData.name}.";
-                return false;
-            }
-
             if (!GameDatabase.TryGet(out IMapGridDatabase mapGrid))
             {
-                mapGrid = new MapGridDatabase();
+                mapGrid = new MapGridDatabase(catalog);
                 GameDatabase.Register<IMapGridDatabase>(mapGrid);
             }
 
-            MapGridManager.Instance.LoadMap(mapGridData, grid);
             failureReason = string.Empty;
             return true;
         }

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0632c22ea6e34544ba07cf43cbc8a1b1, type: 3}
+  m_Name: NPC_OldMan_Schedule
+  m_EditorClassIdentifier: 
+  characterId: npc_old_man
+  entries:
+  - entryId: oldman_emergency_square
+    priority: 200
+    targetMapId: 02_Home_01
+    targetCell: {x: 6, y: -5, z: 0}
+    moveSpeedOverride: 3
+    conditions:
+    - {fileID: 11400000, guid: 2b45598ca156fa54da3f796517e8fd88, type: 2}
+  - entryId: oldman_goback_square
+    priority: 200
+    targetMapId: 01_MainScene
+    targetCell: {x: 23, y: -11, z: 0}
+    moveSpeedOverride: 0
+    conditions:
+    - {fileID: 11400000, guid: d5ed6228b9b59bb4b88140301d5b9afc, type: 2}

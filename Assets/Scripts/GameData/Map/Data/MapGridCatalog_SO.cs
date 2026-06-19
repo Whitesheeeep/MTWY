@@ -16,6 +16,7 @@ namespace GameData
     public struct MapGridCatalogEntry
     {
         [WSScene] public string mapId;
+        [WSAddressableKey("MapGrid", "SO")]
         public string resourceKey;
         public bool pinOnLoad;
     }

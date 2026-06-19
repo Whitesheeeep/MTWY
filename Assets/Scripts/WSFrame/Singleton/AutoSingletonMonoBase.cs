@@ -35,8 +35,8 @@ namespace WS_Modules.Singleton
                                 // 注意：此处在子线程访问会抛出 Unity 异常，这是引擎底层限制
                                 var obj = new GameObject(typeof(T).Name + " (Singleton)");
                                 _instance = obj.AddComponent<T>();
-                                DontDestroyOnLoad(obj);
                             }
+                            DontDestroyOnLoad(_instance.gameObject);
                         }
                     }
                 }

@@ -11525,131 +11525,131 @@ MonoBehaviour:
   - cellPosition: {x: -13, y: 3, z: 0}
     gridX: 6
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -12, y: 3, z: 0}
     gridX: 7
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -11, y: 3, z: 0}
     gridX: 8
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -10, y: 3, z: 0}
     gridX: 9
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -9, y: 3, z: 0}
     gridX: 10
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -8, y: 3, z: 0}
     gridX: 11
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -7, y: 3, z: 0}
     gridX: 12
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -6, y: 3, z: 0}
     gridX: 13
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -5, y: 3, z: 0}
     gridX: 14
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -4, y: 3, z: 0}
     gridX: 15
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -3, y: 3, z: 0}
     gridX: 16
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -2, y: 3, z: 0}
     gridX: 17
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: -1, y: 3, z: 0}
     gridX: 18
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 0, y: 3, z: 0}
     gridX: 19
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 1, y: 3, z: 0}
     gridX: 20
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 2, y: 3, z: 0}
     gridX: 21
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 3, y: 3, z: 0}
     gridX: 22
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 4, y: 3, z: 0}
     gridX: 23
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 5, y: 3, z: 0}
     gridX: 24
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 6, y: 3, z: 0}
     gridX: 25
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 7, y: 3, z: 0}
     gridX: 26
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 8, y: 3, z: 0}
     gridX: 27
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 9, y: 3, z: 0}
     gridX: 28
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 10, y: 3, z: 0}
     gridX: 29
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 11, y: 3, z: 0}
     gridX: 30
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 12, y: 3, z: 0}
     gridX: 31
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 13, y: 3, z: 0}
     gridX: 32
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 14, y: 3, z: 0}
     gridX: 33
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 15, y: 3, z: 0}
     gridX: 34
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 16, y: 3, z: 0}
     gridX: 35
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 17, y: 3, z: 0}
     gridX: 36
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 18, y: 3, z: 0}
     gridX: 37
     gridY: 41
-    staticFlags: 0
+    staticFlags: 1
   - cellPosition: {x: 19, y: 3, z: 0}
     gridX: 38
     gridY: 41

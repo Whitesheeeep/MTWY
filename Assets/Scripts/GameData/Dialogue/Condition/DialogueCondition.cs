@@ -12,6 +12,7 @@ namespace GameData
         /// 判断当前条件是否满足。
         /// </summary>
         /// <param name="services">对话运行时服务表。</param>
+        /// <param name="failedReason">条件不满足时的失败原因描述。</param>
         /// <returns>条件满足时返回 true。</returns>
         public abstract bool IsMet(IDialogueServices services, out string failedReason);
         #endregion

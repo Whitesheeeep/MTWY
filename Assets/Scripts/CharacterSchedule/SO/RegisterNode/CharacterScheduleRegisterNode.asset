@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc62ef5abdc71ed4d9688aaefa4760c1, type: 3}
+  m_Name: CharacterScheduleRegisterNode
+  m_EditorClassIdentifier: 
+  definitions:
+  - {fileID: 11400000, guid: 676013e91eb0a834fa5332dffd8b7c03, type: 2}
+  schedules:
+  - {fileID: 11400000, guid: dd7d8252e2e939e48bd3c847e7340b9e, type: 2}

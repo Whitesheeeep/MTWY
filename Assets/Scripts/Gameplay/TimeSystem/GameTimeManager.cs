@@ -16,7 +16,7 @@ namespace Gameplay.TimeSystem
     /// 游戏内时间管理器。
     /// 使用 TimerManager 将真实时间转换为游戏分钟，并用独立 TimeWheelScheduler 调度游戏分钟任务。
     /// </summary>
-    public sealed class GameTimeManager : SingletonMonoBase<GameTimeManager>
+    public sealed class GameTimeManager : AutoSingletonMonoBase<GameTimeManager>
     {
         #region Constants
 
@@ -372,8 +372,9 @@ namespace Gameplay.TimeSystem
             timeScale.Value = 1f;
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             Clear();
         }
 

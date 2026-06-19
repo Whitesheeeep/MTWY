@@ -83,7 +83,7 @@ public class Player : AutoSingletonMonoBase<Player>
         fsmController?.OnFixedUpdate();
 
         float currentSpeed = IsRunPressed ? runSpeed : speed;
-        rb.MovePosition(transform.position + (MoveDir * (currentSpeed * Time.fixedDeltaTime)).ToVector3_XY());
+        rb.MovePosition(rb.position + (MoveDir * (currentSpeed * Time.fixedDeltaTime)));
     }
 
     public void SetHandHolding(bool isHandHolding)

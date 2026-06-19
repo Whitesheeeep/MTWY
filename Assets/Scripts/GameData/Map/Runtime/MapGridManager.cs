@@ -35,14 +35,33 @@ namespace GameData
             return TryGetDatabase(out IMapGridDatabase database) && database.IsLoaded(mapId);
         }
 
-        public void LoadCurrentMap(MapGridData_SO mapData, Grid grid)
+        public bool TryGetLoadedMapData(string mapId, out MapGridData_SO mapData)
         {
-            Database.LoadMap(mapData, grid);
+            if (TryGetDatabase(out IMapGridDatabase database))
+            {
+                return database.TryGetLoadedMapData(mapId, out mapData);
+            }
+
+            mapData = null;
+            return false;
         }
 
-        public void LoadMap(MapGridData_SO mapData, Grid grid)
+        public bool TryGetMapCellSize(string mapId, out Vector3 cellSize)
         {
-            LoadCurrentMap(mapData, grid);
+            if (TryGetDatabase(out IMapGridDatabase database))
+            {
+                return database.TryGetMapCellSize(mapId, out cellSize);
+            }
+
+            cellSize = Vector3.one;
+            return false;
+        }
+
+        public UniTask<bool> LoadCurrentMapAsync(string mapId, Grid grid)
+        {
+            return TryGetDatabase(out IMapGridDatabase database)
+                ? database.LoadCurrentMapAsync(mapId, grid)
+                : UniTask.FromResult(false);
         }
 
         public void UnloadCurrentMap()

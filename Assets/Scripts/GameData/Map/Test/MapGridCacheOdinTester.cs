@@ -4,30 +4,29 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Cysharp.Threading.Tasks;
 using Sirenix.OdinInspector;
-using UnityEditor;
 using UnityEngine;
 
 namespace GameData
 {
     /// <summary>
-    /// 基于 Odin Inspector 的 MapGrid 多地图缓存手动测试组件，用于验证多张地图加载、缓存状态、指定 mapId 查询和 runtime override。
+    /// 基于 Odin Inspector 的 MapGrid 多地图缓存手动测试组件。
+    /// 测试加载路径与运行时保持一致：mapId -> Catalog -> AddressablesKey -> MapGridData_SO。
     /// </summary>
     public sealed class MapGridCacheOdinTester : MonoBehaviour
     {
         [Serializable]
         private sealed class TestMapEntry
         {
-            [LabelText("测试 MapId")] public string mapId = "Test_Map";
-            [LabelText("地图 SO")] public MapGridData_SO mapGridData;
+            [LabelText("地图 MapId")] public string mapId = "01_MainScene";
             [LabelText("场景 Grid，可选")] public Grid grid;
             [LabelText("示例 Cell")] public Vector3Int sampleCell;
         }
 
         [Title("单图测试")]
-        [InfoBox("testMapId 是普通 string。点击同步按钮后会写入当前 SO 的 mapId，方便用任意字符串测试。")]
-        [SerializeField] private string testMapId = "Test_Map_01";
-        [SerializeField] private MapGridData_SO mapGridData;
+        [SerializeField] private MapGridCatalog_SO catalog;
+        [SerializeField] private string testMapId = "01_MainScene";
         [SerializeField] private Grid grid;
 
         [Title("多图测试")]
@@ -35,12 +34,12 @@ namespace GameData
         [SerializeField] private bool keepLastLoadedMapAsCurrent;
 
         [Title("查询参数")]
-        [SerializeField] private string queryMapId = "Test_Map_01";
+        [SerializeField] private string queryMapId = "01_MainScene";
         [SerializeField] private Vector3Int queryCell;
         [SerializeField] private bool includeDiagonalNeighbors;
 
         [Title("Override 参数")]
-        [SerializeField] private string overrideMapId = "Test_Map_01";
+        [SerializeField] private string overrideMapId = "01_MainScene";
         [SerializeField] private string overrideSourceId = "ManualTest:001";
         [SerializeField] private List<Vector3Int> overrideCells = new List<Vector3Int>();
         [SerializeField] private MapGridCellFlags addFlags = MapGridCellFlags.Blocked;
@@ -49,151 +48,18 @@ namespace GameData
         [Title("最近结果")]
         [ShowInInspector, ReadOnly, MultiLineProperty(12)] private string lastResult = "Ready.";
 
-        /// <summary>
-        /// 将单图测试 mapId 写入当前 MapGridData_SO。
-        /// </summary>
-        [Button("同步单图 MapId 到 SO", ButtonSizes.Large)]
-        public void SyncSingleMapIdToSo()
-        {
-            if (!TrySyncMapIdToSo(testMapId, mapGridData, out string failureReason))
-            {
-                ReportFailure($"同步单图 MapId 到 SO 失败：{failureReason}");
-                return;
-            }
-
-            queryMapId = testMapId;
-            overrideMapId = testMapId;
-            ReportSuccess($"已同步单图 mapId 到 SO。mapId={testMapId}, asset={mapGridData.name}");
-        }
-
-        /// <summary>
-        /// 将多图列表中每个 entry 的 mapId 写入对应 MapGridData_SO。
-        /// </summary>
-        [Button("同步多图 MapId 到 SO")]
-        public void SyncAllMapIdsToSo()
-        {
-            if (testMaps == null || testMaps.Count == 0)
-            {
-                ReportFailure("同步多图 MapId 到 SO 失败：testMaps 为空。");
-                return;
-            }
-
-            var builder = new StringBuilder();
-            int successCount = 0;
-            for (int i = 0; i < testMaps.Count; i++)
-            {
-                TestMapEntry entry = testMaps[i];
-                if (entry == null)
-                {
-                    builder.AppendLine($"[{i}] 失败：entry 为空。");
-                    continue;
-                }
-
-                if (!TrySyncMapIdToSo(entry.mapId, entry.mapGridData, out string failureReason))
-                {
-                    builder.AppendLine($"[{i}] 失败：{failureReason}");
-                    continue;
-                }
-
-                successCount++;
-                builder.AppendLine($"[{i}] 成功：mapId={entry.mapId}, asset={entry.mapGridData.name}");
-            }
-
-            ReportSuccess($"同步多图 MapId 完成。success={successCount}/{testMaps.Count}\n{builder}");
-        }
-
-        /// <summary>
-        /// 用单图字段加载当前地图。
-        /// </summary>
         [Button("加载单图为当前地图", ButtonSizes.Large)]
         public void LoadSingleAsCurrentMap()
         {
-            if (!TryValidateMapData(mapGridData, grid, out string failureReason))
-            {
-                ReportFailure($"加载单图失败：{failureReason}");
-                return;
-            }
-
-            EnsureDatabaseRegistered();
-            MapGridManager.Instance.LoadCurrentMap(mapGridData, grid);
-
-            queryMapId = mapGridData.mapId;
-            overrideMapId = mapGridData.mapId;
-            ReportSuccess($"加载单图成功。mapId={mapGridData.mapId}, grid={grid.name}, loaded={MapGridManager.Instance.IsLoaded(mapGridData.mapId)}");
+            LoadSingleAsCurrentMapAsync().Forget();
         }
 
-        /// <summary>
-        /// 按多图列表依次加载地图。默认每张加载后解除当前绑定，让它们留在缓存里。
-        /// </summary>
         [Button("批量加载多图到缓存", ButtonSizes.Large)]
         public void LoadAllMapsIntoCache()
         {
-            if (testMaps == null || testMaps.Count == 0)
-            {
-                ReportFailure("批量加载失败：testMaps 为空。");
-                return;
-            }
-
-            EnsureDatabaseRegistered();
-            var builder = new StringBuilder();
-            int successCount = 0;
-
-            for (int i = 0; i < testMaps.Count; i++)
-            {
-                TestMapEntry entry = testMaps[i];
-                if (entry == null)
-                {
-                    builder.AppendLine($"[{i}] 失败：entry 为空。");
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(entry.mapId))
-                {
-                    TrySyncMapIdToSo(entry.mapId, entry.mapGridData, out _);
-                }
-
-                if (!TryValidateMapData(entry.mapGridData, out string failureReason))
-                {
-                    builder.AppendLine($"[{i}] 失败：{failureReason}");
-                    continue;
-                }
-
-                bool loaded;
-                if (entry.grid != null)
-                {
-                    MapGridManager.Instance.LoadCurrentMap(entry.mapGridData, entry.grid);
-                    loaded = MapGridManager.Instance.IsLoaded(entry.mapGridData.mapId);
-                }
-                else
-                {
-                    loaded = TryEditorLoadMapDataForTest(entry.mapGridData, out failureReason);
-                }
-
-                if (!loaded)
-                {
-                    builder.AppendLine($"[{i}] 失败：{failureReason}");
-                    continue;
-                }
-
-                successCount++;
-                builder.AppendLine($"[{i}] 加载：mapId={entry.mapGridData.mapId}, asset={entry.mapGridData.name}, grid={(entry.grid != null ? entry.grid.name : "none/static-only")}");
-
-                bool shouldUnloadCurrent = entry.grid != null && (!keepLastLoadedMapAsCurrent || i < testMaps.Count - 1);
-                if (shouldUnloadCurrent)
-                {
-                    MapGridManager.Instance.UnloadCurrentMap();
-                    builder.AppendLine($"[{i}] 已解除当前地图绑定，保留在缓存中。loaded={MapGridManager.Instance.IsLoaded(entry.mapGridData.mapId)}");
-                }
-            }
-
-            builder.AppendLine();
-            builder.Append(BuildLoadedMapSnapshotText());
-            ReportSuccess($"批量加载多图完成。success={successCount}/{testMaps.Count}\n{builder}");
+            LoadAllMapsIntoCacheAsync().Forget();
         }
 
-        /// <summary>
-        /// 使用 queryMapId 与 queryCell 查询指定地图的格子信息。
-        /// </summary>
         [Button("查询指定 MapId Cell", ButtonSizes.Large)]
         public void QueryCellByMapId()
         {
@@ -215,9 +81,6 @@ namespace GameData
                 $"查询成功。mapId={queryMapId}, cell={queryCell}, grid=({info.GridX},{info.GridY}), static={info.StaticFlags}, final={info.FinalFlags}, walkable={MapGridManager.Instance.IsWalkable(queryMapId, queryCell)}, neighbors={neighborCount}");
         }
 
-        /// <summary>
-        /// 逐个查询多图列表中的 sampleCell，用于检查多张地图是否都在缓存里且数据正确。
-        /// </summary>
         [Button("查询多图 Sample Cell")]
         public void QueryAllSampleCells()
         {
@@ -237,7 +100,7 @@ namespace GameData
             for (int i = 0; i < testMaps.Count; i++)
             {
                 TestMapEntry entry = testMaps[i];
-                string mapId = ResolveEntryMapId(entry);
+                string mapId = entry != null ? entry.mapId : string.Empty;
                 if (string.IsNullOrWhiteSpace(mapId))
                 {
                     builder.AppendLine($"[{i}] 失败：mapId 为空。");
@@ -254,9 +117,6 @@ namespace GameData
             ReportSuccess("多图 Sample Cell 查询完成。\n" + builder);
         }
 
-        /// <summary>
-        /// 对 overrideMapId 写入一组 runtime override，并立即打印第一个格子的最终 flags。
-        /// </summary>
         [Button("应用 Override 到指定 MapId", ButtonSizes.Large)]
         public void ApplyOverrideByMapId()
         {
@@ -287,9 +147,6 @@ namespace GameData
             ReportSuccess($"应用 Override 成功。mapId={overrideMapId}, sourceId={overrideSourceId}, firstCell={firstCell}, final={info.FinalFlags}");
         }
 
-        /// <summary>
-        /// 清除 overrideSourceId 在 overrideMapId 上写入的所有 runtime override。
-        /// </summary>
         [Button("清除指定 MapId Override")]
         public void ClearOverrideByMapId()
         {
@@ -303,9 +160,6 @@ namespace GameData
             ReportSuccess($"已清除 Override。mapId={overrideMapId}, sourceId={overrideSourceId}");
         }
 
-        /// <summary>
-        /// 卸载当前地图绑定，验证当前地图会从 pinned 状态转入可淘汰缓存。
-        /// </summary>
         [Button("卸载当前地图并检查缓存")]
         public void UnloadCurrentAndCheckCache()
         {
@@ -322,9 +176,6 @@ namespace GameData
             ReportSuccess($"已卸载当前地图绑定。oldMapId={oldMapId}, currentMapId={MapGridManager.Instance.CurrentMapId}, cacheStillLoaded={stillLoaded}\n{BuildLoadedMapSnapshotText()}");
         }
 
-        /// <summary>
-        /// 打印当前实际存储在 MapGridDatabase 中的地图缓存快照。
-        /// </summary>
         [Button("打印已存储地图快照", ButtonSizes.Large)]
         public void PrintLoadedMapSnapshot()
         {
@@ -337,19 +188,89 @@ namespace GameData
             ReportSuccess(BuildLoadedMapSnapshotText());
         }
 
-        /// <summary>
-        /// 一键执行：同步多图 mapId、批量加载、打印缓存快照、查询 sample cell。
-        /// </summary>
         [Button("一键执行多图流程", ButtonSizes.Large)]
         public void RunMultiMapFlow()
         {
-            SyncAllMapIdsToSo();
-            if (!IsLastResultSuccess())
+            RunMultiMapFlowAsync().Forget();
+        }
+
+        private async UniTaskVoid LoadSingleAsCurrentMapAsync()
+        {
+            if (!TryValidateCurrentMapInput(testMapId, grid, out string failureReason))
             {
+                ReportFailure($"加载单图失败：{failureReason}");
                 return;
             }
 
-            LoadAllMapsIntoCache();
+            EnsureDatabaseRegistered(catalog);
+            bool loaded = await MapGridManager.Instance.LoadCurrentMapAsync(testMapId, grid);
+            if (!loaded)
+            {
+                ReportFailure($"加载单图失败：请检查 Catalog 和 Addressables。mapId={testMapId}");
+                return;
+            }
+
+            queryMapId = testMapId;
+            overrideMapId = testMapId;
+            ReportSuccess($"加载单图成功。mapId={testMapId}, grid={grid.name}, loaded={MapGridManager.Instance.IsLoaded(testMapId)}");
+        }
+
+        private async UniTask LoadAllMapsIntoCacheAsync()
+        {
+            if (testMaps == null || testMaps.Count == 0)
+            {
+                ReportFailure("批量加载失败：testMaps 为空。");
+                return;
+            }
+
+            EnsureDatabaseRegistered(catalog);
+            var builder = new StringBuilder();
+            int successCount = 0;
+
+            for (int i = 0; i < testMaps.Count; i++)
+            {
+                TestMapEntry entry = testMaps[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.mapId))
+                {
+                    builder.AppendLine($"[{i}] 失败：entry 或 mapId 为空。");
+                    continue;
+                }
+
+                bool loaded;
+                if (entry.grid != null)
+                {
+                    loaded = await MapGridManager.Instance.LoadCurrentMapAsync(entry.mapId, entry.grid);
+                }
+                else
+                {
+                    loaded = await MapGridManager.Instance.EnsureLoadedAsync(entry.mapId);
+                }
+
+                if (!loaded)
+                {
+                    builder.AppendLine($"[{i}] 失败：加载失败，请检查 Catalog 和 Addressables。mapId={entry.mapId}");
+                    continue;
+                }
+
+                successCount++;
+                builder.AppendLine($"[{i}] 加载：mapId={entry.mapId}, grid={(entry.grid != null ? entry.grid.name : "none/static-only")}");
+
+                bool shouldUnloadCurrent = entry.grid != null && (!keepLastLoadedMapAsCurrent || i < testMaps.Count - 1);
+                if (shouldUnloadCurrent)
+                {
+                    MapGridManager.Instance.UnloadCurrentMap();
+                    builder.AppendLine($"[{i}] 已解除当前地图绑定，保留在缓存中。loaded={MapGridManager.Instance.IsLoaded(entry.mapId)}");
+                }
+            }
+
+            builder.AppendLine();
+            builder.Append(BuildLoadedMapSnapshotText());
+            ReportSuccess($"批量加载多图完成。success={successCount}/{testMaps.Count}\n{builder}");
+        }
+
+        private async UniTaskVoid RunMultiMapFlowAsync()
+        {
+            await LoadAllMapsIntoCacheAsync();
             if (!IsLastResultSuccess())
             {
                 return;
@@ -364,55 +285,17 @@ namespace GameData
             testMaps ??= new List<TestMapEntry>();
         }
 
-        private static bool TrySyncMapIdToSo(string mapId, MapGridData_SO targetMapData, out string failureReason)
+        private static bool TryValidateCurrentMapInput(string mapId, Grid targetGrid, out string failureReason)
         {
-            if (targetMapData == null)
-            {
-                failureReason = "mapGridData 未赋值";
-                return false;
-            }
-
             if (string.IsNullOrWhiteSpace(mapId))
             {
                 failureReason = "mapId 为空";
                 return false;
             }
 
-            Undo.RecordObject(targetMapData, "Sync MapGrid Test MapId");
-            targetMapData.mapId = mapId;
-            EditorUtility.SetDirty(targetMapData);
-            failureReason = string.Empty;
-            return true;
-        }
-
-        private static bool TryValidateMapData(MapGridData_SO targetMapData, Grid targetGrid, out string failureReason)
-        {
-            if (!TryValidateMapData(targetMapData, out failureReason))
-            {
-                return false;
-            }
-
             if (targetGrid == null)
             {
                 failureReason = "grid 未赋值";
-                return false;
-            }
-
-            failureReason = string.Empty;
-            return true;
-        }
-
-        private static bool TryValidateMapData(MapGridData_SO targetMapData, out string failureReason)
-        {
-            if (targetMapData == null)
-            {
-                failureReason = "mapGridData 未赋值";
-                return false;
-            }
-
-            if (!targetMapData.IsValid)
-            {
-                failureReason = $"mapGridData 无效。asset={targetMapData.name}, mapId={targetMapData.mapId}, size={targetMapData.width}x{targetMapData.height}";
                 return false;
             }
 
@@ -432,52 +315,14 @@ namespace GameData
             return true;
         }
 
-        private static void EnsureDatabaseRegistered()
+        private static void EnsureDatabaseRegistered(MapGridCatalog_SO catalog)
         {
             if (GameDatabase.TryGet(out IMapGridDatabase _))
             {
                 return;
             }
 
-            GameDatabase.Register<IMapGridDatabase>(new MapGridDatabase());
-        }
-
-        private static bool TryEditorLoadMapDataForTest(MapGridData_SO targetMapData, out string failureReason)
-        {
-            if (!GameDatabase.TryGet(out IMapGridDatabase database))
-            {
-                failureReason = "IMapGridDatabase 未注册";
-                return false;
-            }
-
-            if (database is not MapGridDatabase mapGridDatabase)
-            {
-                failureReason = $"当前数据库类型不是 MapGridDatabase，无法使用 Editor 静态加载。type={database.GetType().Name}";
-                return false;
-            }
-
-            if (!mapGridDatabase.EditorLoadMapDataForTest(targetMapData))
-            {
-                failureReason = $"Editor 静态加载失败。asset={targetMapData.name}, mapId={targetMapData.mapId}";
-                return false;
-            }
-
-            failureReason = string.Empty;
-            return true;
-        }
-
-        private static string ResolveEntryMapId(TestMapEntry entry)
-        {
-            if (entry == null)
-            {
-                return string.Empty;
-            }
-
-            return !string.IsNullOrWhiteSpace(entry.mapId)
-                ? entry.mapId
-                : entry.mapGridData != null
-                    ? entry.mapGridData.mapId
-                    : string.Empty;
+            GameDatabase.Register<IMapGridDatabase>(new MapGridDatabase(catalog));
         }
 
         private static int CountNeighbors(string mapId, Vector3Int cell, bool includeDiagonal)
@@ -504,7 +349,7 @@ namespace GameData
 
             if (database is not MapGridDatabase mapGridDatabase)
             {
-                builder.AppendLine($"当前数据库类型不是 MapGridDatabase，无法读取 debug 快照。type={database.GetType().Name}");
+                builder.AppendLine($"当前数据库类型不是 MapGridDatabase，无法读取 debug 快照。Type={database.GetType().Name}");
                 return builder.ToString();
             }
 

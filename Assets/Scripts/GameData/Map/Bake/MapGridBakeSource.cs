@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEngine;
 using WS_Modules;
@@ -26,3 +27,4 @@ namespace GameData
         public List<MapGridTilemapLayer> layers = new List<MapGridTilemapLayer>();
     }
 }
+#endif

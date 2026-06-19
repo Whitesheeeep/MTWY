@@ -14,7 +14,7 @@ namespace WS_Modules
     /// 框架根类，用于初始化框架的核心组件和设置，例如日志系统、资源管理器、事件中心等
     /// </summary>
     [DisallowMultipleComponent]
-    [DefaultExecutionOrder(-100)] // 确保这个组件在其他组件之前执行
+    [DefaultExecutionOrder(-1000)] // 确保这个组件在其他组件之前执行
     public class WSFrameRoot : SingletonMonoBase<WSFrameRoot>
     {
         [SerializeField]

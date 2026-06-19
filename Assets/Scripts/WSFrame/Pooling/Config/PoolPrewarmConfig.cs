@@ -42,6 +42,7 @@ namespace WS_Modules.Pooling
         /// </summary>
         [LabelText("Resource Key")]
         [Tooltip("Resource load key, for example Cube or TestFolder/Cube1 under Resources.")]
+        [WSAddressableKey]
         public string key;
 
         /// <summary>

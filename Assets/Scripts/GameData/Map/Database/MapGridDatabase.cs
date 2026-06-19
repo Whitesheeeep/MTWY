@@ -109,22 +109,62 @@ namespace GameData
                    mapCache.Contains(mapId);
         }
 
-        public void LoadMap(MapGridData_SO mapData, Grid grid)
+        public bool TryGetLoadedMapData(string mapId, out MapGridData_SO mapData)
         {
-            if (mapData == null)
+            if (TryGetState(mapId, out MapGridMapState state))
             {
-                throw new ArgumentNullException(nameof(mapData));
+                mapData = state.staticModule.LoadedMapData;
+                return mapData != null;
+            }
+
+            mapData = null;
+            return false;
+        }
+
+        public bool TryGetMapCellSize(string mapId, out Vector3 cellSize)
+        {
+            if (TryGetLoadedMapData(mapId, out MapGridData_SO mapData))
+            {
+                cellSize = mapData.cellSize;
+                if (Mathf.Approximately(cellSize.x, 0f))
+                {
+                    cellSize.x = 1f;
+                }
+
+                if (Mathf.Approximately(cellSize.y, 0f))
+                {
+                    cellSize.y = 1f;
+                }
+
+                if (Mathf.Approximately(cellSize.z, 0f))
+                {
+                    cellSize.z = 1f;
+                }
+
+                return true;
+            }
+
+            cellSize = Vector3.one;
+            return false;
+        }
+
+        public async UniTask<bool> LoadCurrentMapAsync(string mapId, Grid grid)
+        {
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                Debug.LogWarning("[MapGridDatabase] Cannot bind current map because mapId is empty.");
+                return false;
             }
 
             if (grid == null)
             {
-                throw new ArgumentNullException(nameof(grid));
+                Debug.LogWarning($"[MapGridDatabase] Cannot bind current map because Grid is null. Map:{mapId}");
+                return false;
             }
 
-            string mapId = mapData.mapId;
-            if (string.IsNullOrWhiteSpace(mapId))
+            if (!await EnsureLoadedAsync(mapId))
             {
-                throw new ArgumentException($"[MapGridDatabase] MapGridData has empty mapId: {mapData.name}", nameof(mapData));
+                return false;
             }
 
             MapGridMapState state;
@@ -139,14 +179,19 @@ namespace GameData
             }
             else
             {
-                TryGetCatalogEntry(mapId, out MapGridCatalogEntry entry);
-                state = CreateState(mapData, entry.resourceKey, false, entry.pinOnLoad);
-                state.pinFromCurrentScene = true;
-                mapCache.SetPinned(state);
+                Debug.LogWarning($"[MapGridDatabase] Cannot bind current map because loaded state was not found. Map:{mapId}");
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentMapId) &&
+                !string.Equals(currentMapId, mapId, StringComparison.Ordinal))
+            {
+                ReleaseCurrentScenePin(currentMapId);
             }
 
             currentMapId = mapId;
             currentGrid = grid;
+            return true;
         }
 
         public void UnloadCurrentMap()
@@ -154,19 +199,7 @@ namespace GameData
             string mapId = currentMapId;
             if (!string.IsNullOrWhiteSpace(mapId))
             {
-                if (mapCache.TryGetPinned(mapId, out MapGridMapState state))
-                {
-                    state.pinFromCurrentScene = false;
-                    if (!state.IsPinned)
-                    {
-                        mapCache.LruCapacity = GetMaxCachedMaps();
-                        mapCache.SetLru(state);
-                    }
-                }
-                else if (mapCache.ContainsLru(mapId))
-                {
-                    Debug.LogError($"[MapGridDatabase] Current map '{mapId}' was found in LRU cache. Current maps must be pinned.");
-                }
+                ReleaseCurrentScenePin(mapId);
             }
 
             currentMapId = string.Empty;
@@ -377,6 +410,23 @@ namespace GameData
             mapCache.Store(state);
         }
 
+        private void ReleaseCurrentScenePin(string mapId)
+        {
+            if (mapCache.TryGetPinned(mapId, out MapGridMapState state))
+            {
+                state.pinFromCurrentScene = false;
+                if (!state.IsPinned)
+                {
+                    mapCache.LruCapacity = GetMaxCachedMaps();
+                    mapCache.SetLru(state);
+                }
+            }
+            else if (mapCache.ContainsLru(mapId))
+            {
+                Debug.LogError($"[MapGridDatabase] Current map '{mapId}' was found in LRU cache. Current maps must be pinned.");
+            }
+        }
+
         private void TrimLruCacheIfNeeded(MapGridMapCache cache)
         {
             if (cache.LruCapacity <= 0)
@@ -473,29 +523,6 @@ namespace GameData
             }
 
             return results;
-        }
-
-        public bool EditorLoadMapDataForTest(MapGridData_SO mapData)
-        {
-            if (mapData == null || !mapData.IsValid)
-            {
-                return false;
-            }
-
-            string mapId = mapData.mapId;
-            if (string.IsNullOrWhiteSpace(mapId))
-            {
-                return false;
-            }
-
-            if (mapCache.Contains(mapId))
-            {
-                return true;
-            }
-
-            MapGridMapState state = CreateState(mapData, string.Empty, false, false);
-            StoreState(state);
-            return true;
         }
 
         private static MapGridLoadedMapDebugInfo CreateDebugInfo(MapGridMapState state, string cacheKind)

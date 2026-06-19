@@ -6,7 +6,7 @@ namespace WS_Modules.ConfigInstaller
     /// 框架配置安装器。只执行一个根节点，具体配置树由根节点组合。
     /// </summary>
     [DisallowMultipleComponent]
-    [DefaultExecutionOrder(-1000)]
+    [DefaultExecutionOrder(-100)]
     public sealed class FrameworkConfigInstaller : MonoBehaviour
     {
         [SerializeField, Tooltip("配置注册树的根节点。启动时只会从这个节点开始执行 Register，具体子节点由该 RootNode 组合。")]

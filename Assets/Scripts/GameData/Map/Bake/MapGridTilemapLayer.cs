@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using UnityEngine.Tilemaps;
 
@@ -25,3 +26,4 @@ namespace GameData
         public bool affectsBounds = true;
     }
 }
+#endif
