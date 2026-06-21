@@ -29,6 +29,14 @@ namespace FarmSystem
                     new MatureCropRule()
                 });
 
+        private readonly FarmRulePipelineModule removeCropRulePipeline =
+            new FarmRulePipelineModule(
+                new IFarmActionRule[]
+                {
+                    new MapCellContextRule(),
+                    new SelectedItemTypeRule(E_ItemType.HoeTool),
+                    new PlantedRule()
+                });
         public bool CanPlant(FarmRuleContext context, out string reason)
         {
             return plantRulePipeline.CanExecute(context, out reason);
@@ -37,6 +45,14 @@ namespace FarmSystem
         public bool CanHarvest(FarmRuleContext context, out string reason)
         {
             return harvestRulePipeline.CanExecute(context, out reason);
+        }
+
+        /// <summary>
+        /// 判断当前上下文是否允许铲除已有作物。
+        /// </summary>
+        public bool CanRemoveCrop(FarmRuleContext context, out string reason)
+        {
+            return removeCropRulePipeline.CanExecute(context, out reason);
         }
     }
 }

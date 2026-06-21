@@ -133,4 +133,23 @@ namespace FarmSystem
         public int HarvestCount { get; }
         public bool Regrew { get; }
     }
+
+    /// <summary>
+    /// 作物被铲除事件参数。该事件只表示作物状态被移除，不表示收获或奖励发放。
+    /// </summary>
+    public readonly struct FarmCropRemovedEventArgs
+    {
+        public FarmCropRemovedEventArgs(string mapId, Vector3Int cell, int cropDataId, PlantedCropState removedState)
+        {
+            MapId = mapId;
+            Cell = cell;
+            CropDataId = cropDataId;
+            RemovedState = removedState;
+        }
+
+        public string MapId { get; }
+        public Vector3Int Cell { get; }
+        public int CropDataId { get; }
+        public PlantedCropState RemovedState { get; }
+    }
 }

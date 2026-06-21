@@ -17,7 +17,8 @@ namespace InteractionSystem
             switch (context.SelectedItemType)
             {
                 case E_ItemType.HoeTool:
-                    return FarmLandManager.Instance.TryTill(context);
+                    return FarmLandManager.Instance.TryRemoveCrop(context) ||
+                           FarmLandManager.Instance.TryTill(context);
                 case E_ItemType.WaterTool:
                     return FarmLandManager.Instance.TryWater(context);
                 case E_ItemType.Seed:

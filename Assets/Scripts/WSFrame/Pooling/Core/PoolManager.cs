@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
@@ -39,6 +39,9 @@ namespace WS_Modules.Pooling
 
         #region Prewarm
         public void Prewarm(string key, int initCount, int maxCapacity) => _gameObjectPoolModule.Prewarm(key, initCount, maxCapacity);
+        /// <summary>
+        /// 使用已经持有的 prefab 预热 GameObject 池。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；资源路径或 Addressable 场景建议优先使用 string key 重载。
+        /// </summary>
         public void Prewarm(GameObject prefab, int initCount, int maxCapacity) => _gameObjectPoolModule.Prewarm(prefab, initCount, maxCapacity);
 
         public void PrewarmClass<T>(int count, int maxCapacity) where T : class, new() => _classPoolModule.Prewarm<T>(count, maxCapacity);
@@ -50,7 +53,18 @@ namespace WS_Modules.Pooling
         #region Get
         public GameObject Get<T>(Transform parent = null) where T : IPoolable => _gameObjectPoolModule.Get<T>(parent);
         public GameObject Get(string key, Transform parent = null) => _gameObjectPoolModule.Get(key, parent);
+
+        /// <summary>
+        /// 使用已经持有的 prefab 获取 GameObject。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；池为空时直接实例化该 prefab，不走资源加载器。
+        /// </summary>
+        public GameObject Get(GameObject prefab, Transform parent = null) => _gameObjectPoolModule.Get(prefab, parent);
+
         public List<GameObject> GetSome(string key, int count, Transform parent = null) => _gameObjectPoolModule.GetSome(key, count, parent);
+
+        /// <summary>
+        /// 使用已经持有的 prefab 批量获取 GameObject。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；池数量不足时直接实例化该 prefab 补足，不走资源加载器。
+        /// </summary>
+        public List<GameObject> GetSome(GameObject prefab, int count, Transform parent = null) => _gameObjectPoolModule.GetSome(prefab, count, parent);
 
         public async UniTask<GameObject> GetAsync<T>(Transform parent = null) => await _gameObjectPoolModule.GetAsync<T>(parent);
         public async UniTask<GameObject> GetAsync(string key, Transform parent = null) => await _gameObjectPoolModule.GetAsync(key, parent);
@@ -66,7 +80,14 @@ namespace WS_Modules.Pooling
 
         #region Recycle
         public void Recycle(string key, GameObject go) => _gameObjectPoolModule.Recycle(key, go);
+        /// <summary>
+        /// 回收已经持有的 GameObject 实例。优先使用实例上的 PoolObjectIdentity.PoolKey，缺失时使用实例名称；资源路径或 Addressable 场景建议确保实例带有稳定的 PoolObjectIdentity。
+        /// </summary>
         public void Recycle(GameObject go) => _gameObjectPoolModule.Recycle(go);
+
+        /// <summary>
+        /// 批量回收已经持有的 GameObject 实例。使用第一项的 PoolObjectIdentity.PoolKey 或名称定位池，要求列表内对象来自同一个池。
+        /// </summary>
         public void RecycleSome(List<GameObject> gos) => _gameObjectPoolModule.RecycleSome(gos);
         
         /// <summary>

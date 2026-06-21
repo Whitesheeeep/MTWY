@@ -15,7 +15,7 @@ namespace CursorSystem
             switch (selectedItemData.itemType)
             {
                 case E_ItemType.HoeTool:
-                    return FarmLandManager.Instance.CanTill(CreateContext(selectedItemData, cellInfo));
+                    return CanHoeInteract(selectedItemData, cellInfo);
                 case E_ItemType.WaterTool:
                     return FarmLandManager.Instance.CanWater(CreateContext(selectedItemData, cellInfo));
                 case E_ItemType.Seed:
@@ -30,6 +30,11 @@ namespace CursorSystem
             }
         }
 
+        private static bool CanHoeInteract(ItemData selectedItemData, MapGridCellInfo cellInfo)
+        {
+            ItemInteractionContext context = CreateContext(selectedItemData, cellInfo);
+            return FarmLandManager.Instance.CanRemoveCrop(context) || FarmLandManager.Instance.CanTill(context);
+        }
         private static bool HasFlag(MapGridCellInfo cellInfo, MapGridCellFlags flag)
         {
             return (cellInfo.FinalFlags & flag) == flag;

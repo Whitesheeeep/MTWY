@@ -42,6 +42,7 @@ namespace FarmSystem
         public event Action<FarmCropStageChangedEventArgs> CropStageChanged;
         public event Action<FarmCropMaturedEventArgs> CropMatured;
         public event Action<FarmCropHarvestedEventArgs> CropHarvested;
+        public event Action<FarmCropRemovedEventArgs> CropRemoved;
 
         public bool CanTill(ItemInteractionContext context)
         {
@@ -186,6 +187,48 @@ namespace FarmSystem
             return true;
         }
 
+        /// <summary>
+        /// 判断当前交互上下文是否允许铲除目标格作物。
+        /// </summary>
+        public bool CanRemoveCrop(ItemInteractionContext context)
+        {
+            return TryCreateRuleContext(context, out FarmRuleContext ruleContext, out _) &&
+                   cropRulePipelineModule.CanRemoveCrop(ruleContext, out _);
+        }
+
+        /// <summary>
+        /// 尝试铲除目标格作物，只移除作物状态，不发放收获奖励。
+        /// </summary>
+        public bool TryRemoveCrop(ItemInteractionContext context)
+        {
+            if (!TryCreateRuleContext(context, out FarmRuleContext ruleContext, out string reason) ||
+                !cropRulePipelineModule.CanRemoveCrop(ruleContext, out reason))
+            {
+                Debug.Log($"[FarmLandManager] 铲除作物失败: {reason}");
+                return false;
+            }
+
+            if (!cropModule.TryRemoveCrop(ruleContext.MapId, ruleContext.TargetCell, out PlantedCropState removedState))
+            {
+                Debug.Log("[FarmLandManager] 铲除作物失败: 作物模块拒绝移除作物状态");
+                return false;
+            }
+
+            int cropDataId = removedState?.CropDataId ?? 0;
+            if (!IsTilled(ruleContext.MapId, ruleContext.TargetCell) && !IsPlanted(ruleContext.MapId, ruleContext.TargetCell))
+            {
+                ClearFarmProjection(ruleContext.MapId, ruleContext.TargetCell);
+            }
+
+            Debug.Log($"[FarmLandManager] 铲除作物成功 cropDataId={cropDataId}, mapId={ruleContext.MapId}, cell={ruleContext.TargetCell}");
+            CropRemoved?.Invoke(new FarmCropRemovedEventArgs(
+                ruleContext.MapId,
+                ruleContext.TargetCell,
+                cropDataId,
+                removedState));
+            RaiseCellStateChanged(ruleContext.MapId, ruleContext.TargetCell);
+            return true;
+        }
         public bool IsTilled(string mapId, Vector3Int cell)
         {
             return soilModule.IsTilled(mapId, cell);

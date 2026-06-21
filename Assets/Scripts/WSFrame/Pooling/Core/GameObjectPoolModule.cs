@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using WS_Modules.LogModule;
 using Cysharp.Threading.Tasks;
 using UnityEngine.Events;
@@ -33,22 +36,24 @@ namespace WS_Modules.Pooling
             this.gameObjectResLoader = gameObjectResLoader;
         }
 
+        /// <summary>
+        /// 使用已经持有的 prefab 预热 GameObject 池。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；资源路径或 Addressable 场景建议优先使用 string key 重载。
+        /// </summary>
         public void Prewarm(GameObject prefab, int initCount, int maxCapacity)
         {
             if (prefab == null)
             {
-                WSLog.LogWarning($"Prewarm: prefab is null.");
+                WSLog.LogWarning("Prewarm: prefab is null.");
                 return;
             }
 
-            string key = prefab.GetComponent<PoolObjectIdentity>()?.PoolKey ?? prefab.name;
-            if (!CheckPrewarmValid(key, initCount, maxCapacity)) return;
+            string key = ResolvePoolKey(prefab);
+            if (!CheckPrewarmValid(key, initCount, maxCapacity, false)) return;
 
             var poolData = GetOrCreatePrewarmPool(key, maxCapacity);
             int needed = initCount - poolData.Count;
             if (needed <= 0) return;
 
-            // 预热时直接使用传入的预制体实例作为第一个对象，避免重复加载资源。
             PrewarmObjects(poolData, key, prefab, needed, false);
         }
 
@@ -138,7 +143,7 @@ namespace WS_Modules.Pooling
 
             if (!PoolDic.TryGetValue(key, out var data))
             {
-                // 自动创建一个无限容量的池
+                // 自动创建一个无限容量的池。
                 WSLog.Log("创建新的对象池: " + key + ", 默认无限容量，如果需要容量限制请预先调用 Prewarm 方法设置容量，同时建议预热池子以避免后续获取时的性能问题");
                 data = new GameObjectPoolData(poolRootTransform, -1, $"Pool_{key}");
                 PoolDic[key] = data;
@@ -146,17 +151,50 @@ namespace WS_Modules.Pooling
 
             if (data.TryGet(out var go, parent))
             {
-                // 复用池中对象，设置 parent 并激活
                 PrepareForGet(go);
                 return go;
             }
 
-            // 如果池中没有对象了，尝试加载预制体并实例化返回
             var prefab = gameObjectResLoader.Load<GameObject>(key);
             if (prefab == null)
             {
                 WSLog.LogWarning($"Get: no prefab found for key '{key}' and pool is empty.");
                 return null;
+            }
+
+            var inst = GameObject.Instantiate(prefab, parent, false);
+            MarkObjectIdentity(inst, key);
+            PrepareForGet(inst);
+            inst.name = prefab.name;
+            return inst;
+        }
+
+        /// <summary>
+        /// 使用已经持有的 prefab 获取 GameObject。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；池为空时直接实例化该 prefab，不走资源加载器。
+        /// </summary>
+        public GameObject Get(GameObject prefab, Transform parent = null)
+        {
+            if (prefab == null)
+            {
+                WSLog.LogWarning("Get: prefab is null.");
+                return null;
+            }
+
+            string key = ResolvePoolKey(prefab);
+            if (!CheckKeyValid(key)) return null;
+
+            if (!PoolDic.TryGetValue(key, out var data))
+            {
+                // 直传 prefab 获取时自动创建无限容量池，后续回收可以复用。
+                WSLog.Log("创建新的对象池: " + key + ", 默认无限容量，如果需要容量限制请预先调用 Prewarm 方法设置容量，同时建议预热池子以避免后续获取时的性能问题");
+                data = new GameObjectPoolData(poolRootTransform, -1, $"Pool_{key}");
+                PoolDic[key] = data;
+            }
+
+            if (data.TryGet(out var go, parent))
+            {
+                PrepareForGet(go);
+                return go;
             }
 
             var inst = GameObject.Instantiate(prefab, parent, false);
@@ -203,6 +241,52 @@ namespace WS_Modules.Pooling
             return instList;
         }
         
+        /// <summary>
+        /// 使用已经持有的 prefab 批量获取 GameObject。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；池数量不足时直接实例化该 prefab 补足，不走资源加载器。
+        /// </summary>
+        public List<GameObject> GetSome(GameObject prefab, int count, Transform parent = null)
+        {
+            if (prefab == null)
+            {
+                WSLog.LogWarning("GetSome: prefab is null.");
+                return null;
+            }
+
+            if (count <= 0)
+            {
+                WSLog.LogWarning("GetSome: count must be greater than 0.");
+                return new List<GameObject>();
+            }
+
+            string key = ResolvePoolKey(prefab);
+            if (!CheckKeyValid(key)) return null;
+
+            if (!PoolDic.TryGetValue(key, out var data))
+            {
+                // 直传 prefab 批量获取时自动创建无限容量池，后续回收可以复用。
+                WSLog.Log("创建新的对象池: " + key + ", 默认无限容量，如果需要容量限制请预先调用 Prewarm 方法设置容量，同时建议预热池子以避免后续获取时的性能问题");
+                data = new GameObjectPoolData(poolRootTransform, -1, $"Pool_{key}");
+                PoolDic[key] = data;
+            }
+
+            if (data.TryGetSome(count, out var gos, parent))
+            {
+                PrepareForGet(gos);
+                return gos;
+            }
+
+            var instList = new List<GameObject>(count);
+            for (int i = 0; i < count; i++)
+            {
+                var inst = GameObject.Instantiate(prefab, parent, false);
+                MarkObjectIdentity(inst, key);
+                PrepareForGet(inst);
+                inst.name = prefab.name;
+                instList.Add(inst);
+            }
+
+            return instList;
+        }
         /// <summary>
         /// 返回 UniTask&lt;GameObject&gt;版本的 Get 方法，适用于需要从远程或异步资源系统加载预制体的情况，避免在主线程等待资源加载完成。
         /// </summary>
@@ -305,6 +389,7 @@ namespace WS_Modules.Pooling
 
             if (!PoolDic.TryGetValue(key, out var data))
             {
+                ClearEditorSelectionIfNeeded(go);
                 GameObject.Destroy(go);
                 return;
             }
@@ -314,41 +399,30 @@ namespace WS_Modules.Pooling
         }
 
         /// <summary>
-        /// 该方法只能用于 GameObject 的名字与池子的 key 一致的情况，方便调用方直接传入对象实例进行回收，而不需要额外传入 key 参数。
+        /// 回收已经持有的 GameObject 实例。优先使用实例上的 PoolObjectIdentity.PoolKey，缺失时使用实例名称；资源路径或 Addressable 场景建议确保实例带有稳定的 PoolObjectIdentity。
         /// </summary>
-        /// <param name="go"></param>
         public void Recycle(GameObject go)
         {
             if (go == null) return;
-            var key = go.TryGetComponent<PoolObjectIdentity>(out var identity)
-                ? identity.PoolKey
-                :
-                // 去除可能存在的 (Clone) 后缀，确保能正确找到对应的池
-                go.name.Replace("(Clone)", "");
 
+            string key = ResolvePoolKey(go);
             Recycle(key, go);
         }
 
+        /// <summary>
+        /// 批量回收已经持有的 GameObject 实例。使用第一项的 PoolObjectIdentity.PoolKey 或名称定位池，要求列表内对象来自同一个池。
+        /// </summary>
         public void RecycleSome(List<GameObject> gos)
         {
             if (gos is not { Count: > 0 }) return;
 
-            string key;
-            if (gos[0].TryGetComponent<PoolObjectIdentity>(out var identity))
-            {
-                key = identity.PoolKey;
-            }
-            else
-            {
-                // 去除可能存在的 (Clone) 后缀
-                key = gos[0].name.Replace("(Clone)", "");
-            }
-
+            string key = ResolvePoolKey(gos[0]);
             if (!PoolDic.TryGetValue(key, out var data))
             {
                 foreach (var go in gos)
                 {
-                    GameObject.Destroy(go);
+                    ClearEditorSelectionIfNeeded(go);
+                GameObject.Destroy(go);
                 }
 
                 return;
@@ -378,6 +452,52 @@ namespace WS_Modules.Pooling
             PoolDic.Clear();
         }
 
+#if UNITY_EDITOR
+        // 直接销毁池对象前清理编辑器选中态，避免 Inspector 持有已失效对象。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+            if (root == null || Selection.objects == null || Selection.objects.Length == 0)
+            {
+                return;
+            }
+
+            foreach (Object selectedObject in Selection.objects)
+            {
+                if (selectedObject == null)
+                {
+                    continue;
+                }
+
+                if (selectedObject == root)
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+
+                if (selectedObject is Component component &&
+                    component != null &&
+                    component.transform != null &&
+                    component.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+
+                if (selectedObject is GameObject selectedGameObject &&
+                    selectedGameObject != null &&
+                    selectedGameObject.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+            }
+        }
+#else
+        // 非编辑器环境不需要处理 Inspector 选中态。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+        }
+#endif
         private GameObjectPoolData GetOrCreatePrewarmPool(string key, int maxCapacity)
         {
             if (!PoolDic.TryGetValue(key, out var poolData))
@@ -420,9 +540,10 @@ namespace WS_Modules.Pooling
         }
 
         #region 该类的合理性检验
-        private bool CheckPrewarmValid(string key, int initCount, int maxCapacity)
+        private bool CheckPrewarmValid(string key, int initCount, int maxCapacity, bool requireResLoader = true)
         {
-            if (!CheckKeyAndResLoadValid(key)) return false;
+            if (!CheckKeyValid(key)) return false;
+            if (requireResLoader && !CheckResLoadValid()) return false;
 
             if (initCount <= 0 || (initCount > maxCapacity && maxCapacity != -1))
             {
@@ -436,23 +557,48 @@ namespace WS_Modules.Pooling
 
         private bool CheckKeyAndResLoadValid(string key)
         {
-            if (string.IsNullOrEmpty(key))
+            return CheckKeyValid(key) && CheckResLoadValid();
+        }
+
+        private bool CheckKeyValid(string key)
+        {
+            if (!string.IsNullOrEmpty(key))
             {
-                WSLog.LogError($"Prewarm: invalid parameters for key '{key}'.");
-                return false;
+                return true;
             }
 
-            if (gameObjectResLoader == null)
+            WSLog.LogError($"Prewarm: invalid parameters for key '{key}'.");
+            return false;
+        }
+
+        private bool CheckResLoadValid()
+        {
+            if (gameObjectResLoader != null)
             {
-                WSLog.LogError($"Prewarm: gameObjectResLoader is null.");
-                return false;
+                return true;
             }
 
-            return true;
+            WSLog.LogError("Prewarm: gameObjectResLoader is null.");
+            return false;
         }
         #endregion
 
         #region 辅助函数
+        // 解析 GameObject 对应的池 key，优先使用 PoolObjectIdentity，缺失时退回到对象名称。
+        private string ResolvePoolKey(GameObject go)
+        {
+            if (go == null)
+            {
+                return null;
+            }
+
+            if (go.TryGetComponent(out PoolObjectIdentity identity) && !string.IsNullOrEmpty(identity.PoolKey))
+            {
+                return identity.PoolKey;
+            }
+
+            return go.name.Replace("(Clone)", string.Empty);
+        }
         private void MarkObjectIdentity(GameObject go, string key)
         {
             if (go == null) return;

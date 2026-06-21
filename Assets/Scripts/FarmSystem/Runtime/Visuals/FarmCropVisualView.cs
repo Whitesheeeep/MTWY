@@ -1,6 +1,10 @@
 using System.Collections.Generic;
 using GameData;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+using WS_Modules.Pooling;
 using WS_Modules.Singleton;
 
 namespace FarmSystem
@@ -13,6 +17,9 @@ namespace FarmSystem
         [SerializeField] private GameObject cropPrefab;
         [SerializeField] private Transform cropRoot;
         [SerializeField] private bool redrawOnEnable = true;
+        [SerializeField] private bool useObjectPool = true;
+        [SerializeField] private int prewarmCount = 16;
+        [SerializeField] private int maxPoolCapacity = 128;
 
         private readonly Dictionary<Vector3Int, FarmCropVisualEntity> activeEntities =
             new Dictionary<Vector3Int, FarmCropVisualEntity>();
@@ -20,9 +27,12 @@ namespace FarmSystem
         // 启用时订阅 Farm 与地图加载事件，并按需重绘当前地图作物。
         private void OnEnable()
         {
+            PrewarmCropPool();
+
             FarmLandManager.Instance.CropPlanted += OnCropPlanted;
             FarmLandManager.Instance.CropStageChanged += OnCropStageChanged;
             FarmLandManager.Instance.CropHarvested += OnCropHarvested;
+            FarmLandManager.Instance.CropRemoved += OnCropRemoved;
             MapGridManager.Instance.CurrentMapLoaded += OnCurrentMapLoaded;
 
             if (redrawOnEnable)
@@ -37,6 +47,7 @@ namespace FarmSystem
             FarmLandManager.Instance.CropPlanted -= OnCropPlanted;
             FarmLandManager.Instance.CropStageChanged -= OnCropStageChanged;
             FarmLandManager.Instance.CropHarvested -= OnCropHarvested;
+            FarmLandManager.Instance.CropRemoved -= OnCropRemoved;
             MapGridManager.Instance.CurrentMapLoaded -= OnCurrentMapLoaded;
         }
 
@@ -86,6 +97,16 @@ namespace FarmSystem
         }
 
         // 使用当前地图 ID 发起一次完整重绘。
+        // 作物被铲除后移除当前地图目标格的作物表现。
+        private void OnCropRemoved(FarmCropRemovedEventArgs args)
+        {
+            if (!IsCurrentMap(args.MapId))
+            {
+                return;
+            }
+
+            RemoveCrop(args.Cell);
+        }
         private void RedrawCurrentMap()
         {
             string currentMapId = MapGridManager.Instance.CurrentMapId;
@@ -163,7 +184,7 @@ namespace FarmSystem
             }
 
             EnsureCropRoot();
-            GameObject instance = Instantiate(cropPrefab, cropRoot);
+            GameObject instance = CreateCropInstance();
             if (!instance.TryGetComponent(out entity))
             {
                 Debug.LogError($"[FarmCropVisualView] 作物 prefab 缺少 FarmCropVisualEntity 组件: {cropPrefab.name}", instance);
@@ -172,6 +193,35 @@ namespace FarmSystem
 
             activeEntities[cell] = entity;
             return entity;
+        }
+
+        // 启用对象池时预热一批作物表现对象，降低首次批量生成的实例化成本。
+        private void PrewarmCropPool()
+        {
+            if (!useObjectPool || cropPrefab == null || prewarmCount <= 0)
+            {
+                return;
+            }
+
+            PoolManager.Instance.Prewarm(cropPrefab, prewarmCount, maxPoolCapacity);
+        }
+
+        // 创建作物表现对象，优先从对象池获取，获取失败时回退到直接实例化。
+        private GameObject CreateCropInstance()
+        {
+            if (!useObjectPool)
+            {
+                return Instantiate(cropPrefab, cropRoot);
+            }
+
+            GameObject instance = PoolManager.Instance.Get(cropPrefab, cropRoot);
+            if (instance != null)
+            {
+                return instance;
+            }
+
+            Debug.LogWarning("[FarmCropVisualView] Failed to get crop visual from pool, fallback to Instantiate.", this);
+            return Instantiate(cropPrefab, cropRoot);
         }
 
         // 从作物配置与运行时阶段中解析当前应显示的 Sprite。
@@ -223,7 +273,7 @@ namespace FarmSystem
                 return;
             }
 
-            Destroy(entity.gameObject);
+            ReleaseEntity(entity);
         }
 
         // 清空当前 View 管理的所有作物表现实体。
@@ -233,14 +283,79 @@ namespace FarmSystem
             {
                 if (entity != null)
                 {
-                    Destroy(entity.gameObject);
+                    ReleaseEntity(entity);
                 }
             }
 
             activeEntities.Clear();
         }
 
+        // 根据当前配置销毁或回收作物表现对象。
+        private void ReleaseEntity(FarmCropVisualEntity entity)
+        {
+            if (entity == null)
+            {
+                return;
+            }
+
+            ClearEditorSelectionIfNeeded(entity.gameObject);
+
+            if (useObjectPool)
+            {
+                PoolManager.Instance.Recycle(entity.gameObject);
+                return;
+            }
+
+            Destroy(entity.gameObject);
+        }
+
         // 确保运行时有一个用于承载作物表现对象的根节点。
+#if UNITY_EDITOR
+        // 释放作物表现前清理编辑器选中态，避免 Inspector 持有将被回收或销毁的对象。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+            if (root == null || Selection.objects == null || Selection.objects.Length == 0)
+            {
+                return;
+            }
+
+            foreach (Object selectedObject in Selection.objects)
+            {
+                if (selectedObject == null)
+                {
+                    continue;
+                }
+
+                if (selectedObject == root)
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+
+                if (selectedObject is Component component &&
+                    component != null &&
+                    component.transform != null &&
+                    component.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+
+                if (selectedObject is GameObject selectedGameObject &&
+                    selectedGameObject != null &&
+                    selectedGameObject.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new Object[0];
+                    return;
+                }
+            }
+        }
+#else
+        // 非编辑器环境不需要处理 Inspector 选中态。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+        }
+#endif
         private void EnsureCropRoot()
         {
             if (cropRoot != null)

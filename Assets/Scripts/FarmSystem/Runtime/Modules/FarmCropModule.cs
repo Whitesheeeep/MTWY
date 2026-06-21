@@ -203,6 +203,27 @@ namespace FarmSystem
             return true;
         }
 
+        /// <summary>
+        /// 移除指定格子的作物状态，并返回移除前的状态快照。
+        /// </summary>
+        public bool TryRemoveCrop(string mapId, Vector3Int cell, out PlantedCropState removedState)
+        {
+            removedState = null;
+            if (!cropsByMapId.TryGetValue(mapId, out Dictionary<Vector3Int, PlantedCropState> cells) ||
+                !cells.TryGetValue(cell, out PlantedCropState storedState))
+            {
+                return false;
+            }
+
+            removedState = CloneState(storedState);
+            cells.Remove(cell);
+            if (cells.Count == 0)
+            {
+                cropsByMapId.Remove(mapId);
+            }
+
+            return true;
+        }
         private static bool TryGetCurrentStage(CropData cropData, PlantedCropState state, out CropGrowthStageData stage)
         {
             stage = null;

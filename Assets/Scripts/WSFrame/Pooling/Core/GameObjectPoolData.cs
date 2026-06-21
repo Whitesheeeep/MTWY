@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine.SceneManagement;
 using WS_Modules.Extensions;
 using WS_Modules.LogModule;
@@ -70,10 +73,12 @@ namespace WS_Modules.Pooling
             // 不能超出容量
             if (_maxCapacity > 0 && _poolStack.Count >= _maxCapacity)
             {
+                ClearEditorSelectionIfNeeded(go);
                 GameObject.Destroy(go);
             }
             else
             {
+                ClearEditorSelectionIfNeeded(go);
                 _poolStack.Enqueue(go);
                 go.SetActive(false);
                 if(_root) go.transform.SetParent(_root);
@@ -148,6 +153,53 @@ namespace WS_Modules.Pooling
             }
         }
         
+#if UNITY_EDITOR
+        // 回收或销毁池对象前清理编辑器选中态，避免 Inspector 持有已失效对象时报错。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+            if (root == null || Selection.objects == null || Selection.objects.Length == 0)
+            {
+                return;
+            }
+
+            foreach (Object selectedObject in Selection.objects)
+            {
+                if (selectedObject == null)
+                {
+                    continue;
+                }
+
+                if (selectedObject == root)
+                {
+                    Selection.objects = new UnityEngine.Object[0];
+                    return;
+                }
+
+                if (selectedObject is Component component &&
+                    component != null &&
+                    component.transform != null &&
+                    component.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new UnityEngine.Object[0];
+                    return;
+                }
+
+                if (selectedObject is GameObject selectedGameObject &&
+                    selectedGameObject != null &&
+                    selectedGameObject.transform.IsChildOf(root.transform))
+                {
+                    Selection.objects = new UnityEngine.Object[0];
+                    return;
+                }
+            }
+        }
+#else
+        // 非编辑器环境不需要处理 Inspector 选中态。
+        private static void ClearEditorSelectionIfNeeded(GameObject root)
+        {
+        }
+#endif
+
         public void ClearPool()
         {
             if (_poolStack == null) return;
@@ -155,11 +207,13 @@ namespace WS_Modules.Pooling
             {
                 var go = _poolStack.Dequeue();
                 if (go != null)
-                    GameObject.Destroy(go);
+                    ClearEditorSelectionIfNeeded(go);
+                GameObject.Destroy(go);
             }
 
             if (IsOpenLayout && _root != null)
             {
+                ClearEditorSelectionIfNeeded(_root.gameObject);
                 GameObject.Destroy(_root.gameObject);
             }
 
