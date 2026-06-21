@@ -23,6 +23,8 @@ namespace GameData
         public bool HasCurrentGrid => TryGetDatabase(out IMapGridDatabase database) && database.HasCurrentGrid;
         public bool HasCurrentMap => TryGetDatabase(out IMapGridDatabase database) && database.CurrentMapData != null;
 
+        public event Action<MapGridCurrentMapLoadedEventArgs> CurrentMapLoaded;
+
         public UniTask<bool> EnsureLoadedAsync(string mapId)
         {
             return TryGetDatabase(out IMapGridDatabase database)
@@ -57,11 +59,23 @@ namespace GameData
             return false;
         }
 
-        public UniTask<bool> LoadCurrentMapAsync(string mapId, Grid grid)
+        public async UniTask<bool> LoadCurrentMapAsync(string mapId, Grid grid)
         {
-            return TryGetDatabase(out IMapGridDatabase database)
-                ? database.LoadCurrentMapAsync(mapId, grid)
-                : UniTask.FromResult(false);
+            if (!TryGetDatabase(out IMapGridDatabase database))
+            {
+                return false;
+            }
+
+            bool loaded = await database.LoadCurrentMapAsync(mapId, grid);
+            if (loaded)
+            {
+                CurrentMapLoaded?.Invoke(new MapGridCurrentMapLoadedEventArgs(
+                    database.CurrentMapId,
+                    database.CurrentGrid,
+                    database.CurrentMapData));
+            }
+
+            return loaded;
         }
 
         public void UnloadCurrentMap()

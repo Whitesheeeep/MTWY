@@ -4,17 +4,19 @@ using UnityEngine;
 namespace CursorSystem
 {
     /// <summary>
-    /// Current cursor snapshot used by UI and interaction code.
+    /// 当前光标状态快照，供 UI 显示和交互执行逻辑使用。
     /// </summary>
     public readonly struct CursorState
     {
         public CursorState(
             Sprite icon,
             CursorVisualState visualState,
-            ItemData toolData,
+            ItemData selectedItemData,
             GameObject target,
-            IToolInteractable interactable,
+            IItemInteractable interactable,
             CursorTargetType targetType,
+            ItemInteractionContext interactionContext,
+            bool hasInteractionContext,
             MapGridCellInfo cellInfo,
             bool inToolRange,
             bool canInteract,
@@ -23,10 +25,12 @@ namespace CursorSystem
         {
             Icon = icon;
             VisualState = visualState;
-            ToolData = toolData;
+            SelectedItemData = selectedItemData;
             Target = target;
             Interactable = interactable;
             TargetType = targetType;
+            InteractionContext = interactionContext;
+            HasInteractionContext = hasInteractionContext;
             CellInfo = cellInfo;
             InToolRange = inToolRange;
             CanInteract = canInteract;
@@ -36,12 +40,14 @@ namespace CursorSystem
 
         public Sprite Icon { get; }
         public CursorVisualState VisualState { get; }
-        public ItemData ToolData { get; }
+        public ItemData SelectedItemData { get; }
         public GameObject Target { get; }
-        public IToolInteractable Interactable { get; }
+        public IItemInteractable Interactable { get; }
         public CursorTargetType TargetType { get; }
+        public ItemInteractionContext InteractionContext { get; }
+        public bool HasInteractionContext { get; }
         public MapGridCellInfo CellInfo { get; }
-        public bool HasTool => ToolData != null;
+        public bool HasSelectedItem => SelectedItemData != null;
         public bool HasTarget => Target != null;
         public bool HasCellTarget => TargetType == CursorTargetType.MapCell;
         public bool InToolRange { get; }
@@ -53,10 +59,11 @@ namespace CursorSystem
         {
             return Icon == other.Icon
                 && VisualState == other.VisualState
-                && ToolData == other.ToolData
+                && SelectedItemData == other.SelectedItemData
                 && Target == other.Target
                 && ReferenceEquals(Interactable, other.Interactable)
                 && TargetType == other.TargetType
+                && HasInteractionContext == other.HasInteractionContext
                 && CellInfo.CellPosition == other.CellInfo.CellPosition
                 && CellInfo.FinalFlags == other.CellInfo.FinalFlags
                 && InToolRange == other.InToolRange

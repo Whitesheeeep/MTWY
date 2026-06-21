@@ -1,4 +1,5 @@
 ﻿#if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Sirenix.OdinInspector;
@@ -21,6 +22,18 @@ namespace Inventory
         [SerializeField] private int barIndex;
         [SerializeField] private int bagIndex;
         [SerializeField] private int expandSlotCount = 5;
+
+        [Title("批量添加")]
+        [InfoBox("批量内容用逗号分隔，支持 itemId 或 itemId:count，例如: 1001,1002:3,1003。未写数量时使用默认数量。")]
+        [SerializeField] private string batchAddContent = "1001,1002:3";
+        [SerializeField] private int batchDefaultCount = 1;
+
+        [Title("初始配置")]
+        [SerializeField] private bool clearBeforeApplyInitialConfig = true;
+        [SerializeField] private List<InventoryInitialItemConfig> initialItemConfigs = new List<InventoryInitialItemConfig>
+        {
+            new InventoryInitialItemConfig(1001, 1)
+        };
         #endregion
 
         #region Manager 测试
@@ -36,6 +49,63 @@ namespace Inventory
             int remaining = manager.AddItem(itemId, count);
             Debug.Log($"[InventoryOdinTester] Manager 添加物品 itemId={itemId}, count={count}, remaining={remaining}");
             PrintManagerSlots();
+        }
+
+        /// <summary>
+        /// 按逗号切割批量内容，通过 InventoryManager 一次添加多个物品。
+        /// </summary>
+        [Button("Manager 批量添加物品")]
+        public void AddBatchItemsByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            List<InventoryAddItemRequest> requests = ParseAddItemRequests(batchAddContent, batchDefaultCount);
+            AddItemsByManager(manager, requests, "Manager 批量添加物品");
+        }
+
+        /// <summary>
+        /// 应用 Inspector 中配置的初始物品列表。
+        /// </summary>
+        [Button("Manager 应用初始配置")]
+        public void ApplyInitialItemConfigsByManager()
+        {
+            InventoryManager manager = GetManager();
+            if (manager == null) return;
+
+            if (clearBeforeApplyInitialConfig)
+            {
+                manager.Clear();
+                Debug.Log("[InventoryOdinTester] Manager 应用初始配置前已清空 Bar/Bag。");
+            }
+
+            List<InventoryAddItemRequest> requests = new List<InventoryAddItemRequest>();
+            if (initialItemConfigs == null)
+            {
+                Debug.LogWarning("[InventoryOdinTester] 初始配置列表为空。");
+                AddItemsByManager(manager, requests, "Manager 应用初始配置");
+                return;
+            }
+
+            for (int i = 0; i < initialItemConfigs.Count; i++)
+            {
+                InventoryInitialItemConfig config = initialItemConfigs[i];
+                if (config == null)
+                {
+                    Debug.LogWarning($"[InventoryOdinTester] 初始配置第 {i} 项为空，已跳过。");
+                    continue;
+                }
+
+                if (config.ItemId <= 0 || config.Count <= 0)
+                {
+                    Debug.LogWarning($"[InventoryOdinTester] 初始配置第 {i} 项参数无效 itemId={config.ItemId}, count={config.Count}，已跳过。");
+                    continue;
+                }
+
+                requests.Add(new InventoryAddItemRequest(config.ItemId, config.Count));
+            }
+
+            AddItemsByManager(manager, requests, "Manager 应用初始配置");
         }
 
         /// <summary>
@@ -254,16 +324,109 @@ namespace Inventory
         {
             count = Mathf.Max(1, count);
             expandSlotCount = Mathf.Max(1, expandSlotCount);
+            batchDefaultCount = Mathf.Max(1, batchDefaultCount);
+
+            if (initialItemConfigs == null) return;
+
+            for (int i = 0; i < initialItemConfigs.Count; i++)
+            {
+                initialItemConfigs[i]?.Normalize();
+            }
         }
         #endregion
 
         #region Tools
+        private static List<InventoryAddItemRequest> ParseAddItemRequests(string content, int defaultCount)
+        {
+            List<InventoryAddItemRequest> requests = new List<InventoryAddItemRequest>();
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                Debug.LogWarning("[InventoryOdinTester] 批量添加内容为空。");
+                return requests;
+            }
+
+            string[] entries = content.Split(new[] { ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                string entry = entries[i].Trim();
+                if (entry.Length == 0) continue;
+
+                if (!TryParseAddItemRequest(entry, defaultCount, out InventoryAddItemRequest request))
+                {
+                    Debug.LogWarning($"[InventoryOdinTester] 批量添加片段解析失败 entry={entry}，支持 itemId 或 itemId:count。");
+                    continue;
+                }
+
+                requests.Add(request);
+            }
+
+            return requests;
+        }
+
+        private static bool TryParseAddItemRequest(string entry, int defaultCount, out InventoryAddItemRequest request)
+        {
+            request = default;
+            string[] parts = entry.Split(new[] { ':', '*', 'x', 'X' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 1 || parts.Length > 2) return false;
+            if (!int.TryParse(parts[0].Trim(), out int parsedItemId)) return false;
+
+            int parsedCount = defaultCount;
+            if (parts.Length == 2 && !int.TryParse(parts[1].Trim(), out parsedCount)) return false;
+            if (parsedItemId <= 0 || parsedCount <= 0) return false;
+
+            request = new InventoryAddItemRequest(parsedItemId, parsedCount);
+            return true;
+        }
+
+        private static void AddItemsByManager(InventoryManager manager, IReadOnlyList<InventoryAddItemRequest> requests, string operationName)
+        {
+            if (requests == null || requests.Count == 0)
+            {
+                Debug.LogWarning($"[InventoryOdinTester] {operationName} 没有可执行的物品配置。");
+                return;
+            }
+
+            int totalRemaining = 0;
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine($"[InventoryOdinTester] {operationName} 开始 count={requests.Count}");
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                InventoryAddItemRequest request = requests[i];
+                try
+                {
+                    int remaining = manager.AddItem(request.ItemId, request.Count);
+                    totalRemaining += remaining;
+                    builder.AppendLine($"Item {i}: itemId={request.ItemId}, count={request.Count}, remaining={remaining}");
+                }
+                catch (Exception exception)
+                {
+                    builder.AppendLine($"Item {i}: itemId={request.ItemId}, count={request.Count}, error={exception.Message}");
+                }
+            }
+
+            builder.AppendLine($"[InventoryOdinTester] {operationName} 完成 totalRemaining={totalRemaining}");
+            Debug.Log(builder.ToString());
+            PrintManagerSlotsStatic(manager);
+        }
+
         private static InventoryManager GetManager()
         {
             InventoryManager manager = InventoryManager.Instance;
             if (manager == null) Debug.LogError("[InventoryOdinTester] 场景中不存在 InventoryManager。");
 
             return manager;
+        }
+
+        private static void PrintManagerSlotsStatic(InventoryManager manager)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine($"[InventoryOdinTester] Capacity Bag={manager.BagCapacity}, Max={manager.Capacity}, Bar={manager.BarCapacity}");
+            builder.AppendLine("[InventoryOdinTester] Manager Bar Slots");
+            AppendSlots(builder, manager.GetBarSlots());
+            builder.AppendLine("[InventoryOdinTester] Manager Bag Slots");
+            AppendSlots(builder, manager.GetBagSlots());
+            Debug.Log(builder.ToString());
         }
 
         private static void AppendSlots(StringBuilder builder, IReadOnlyList<InventorySlotData> slots)
@@ -276,6 +439,43 @@ namespace Inventory
             }
         }
         #endregion
+
+        [Serializable]
+        private sealed class InventoryInitialItemConfig
+        {
+            [SerializeField] private int itemId;
+            [SerializeField] private int count = 1;
+
+            public InventoryInitialItemConfig()
+            {
+            }
+
+            public InventoryInitialItemConfig(int itemId, int count)
+            {
+                this.itemId = itemId;
+                this.count = count;
+            }
+
+            public int ItemId => itemId;
+            public int Count => count;
+
+            public void Normalize()
+            {
+                count = Mathf.Max(1, count);
+            }
+        }
+
+        private readonly struct InventoryAddItemRequest
+        {
+            public InventoryAddItemRequest(int itemId, int count)
+            {
+                ItemId = itemId;
+                Count = count;
+            }
+
+            public int ItemId { get; }
+            public int Count { get; }
+        }
     }
 }
 #endif

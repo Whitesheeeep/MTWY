@@ -1,66 +1,44 @@
-# Inventory View / Drag 通用化修订计划
+# Farm / Furniture / MapGrid 框架方案
 
 ## Summary
 
-- 移除 `MoveToBag / MoveToBar` 等专用窗口 API。
-- 拖拽系统改为基于 `containerId` 的通用容器间操作。
-- 拖拽过程中通过鼠标 UI Raycast 判断当前指针下的目标容器，避免所有窗口同时接收拖拽指令。
+第一阶段先做“耕种闭环”：锄地、浇水、播种、湿润期间生长、收获。`MapGrid` 保持底层地图查询职责，只保存静态格子能力与运行时占用投影；`Farm/Land` 保存地块、浇水、作物状态；`Furniture` 后续独立保存家具实例并用同一套投影方式影响格子。
 
 ## Key Changes
 
-- ViewModel API 调整：
+- 新增 `CellActionController` 作为点击动作入口：监听左键，读取 `CursorManager.CurrentState`、玩家当前选中物品/工具，统一路由到 `FarmLandManager`，后续再接 `FurnitureManager`。
+- 新增 `FarmLandManager` 管理跨地图地块运行时状态：按 `mapId + cell` 存储耕地、湿润、作物记录；即使地图不在当前场景，只要游戏在运行，后台状态继续推进。
+- 新增 `CropData_SO` 和作物数据库：用 `seedItemId` 映射作物配置，配置阶段时长、阶段表现 prefab/sprite、收获物 itemId/count。
+- 表现层采用 `Tilemap + Prefab`：耕地/湿润由场景内 Farm Tilemap 显示，作物阶段由 prefab 或池化实例显示；地图未加载时只推进数据，不生成表现对象。
+- `MapGrid` 只接收投影：耕地、作物、家具用 `MapGridManager.TryApplyOverride` 写入影响，例如移除 `CanPlaceFurniture`，必要时添加 `Blocked` 或 `NpcObstacle`；清理时用稳定 `sourceId` 移除。
 
-  - `InventoryBarViewModel` 移除 `MoveToBag`。
-  - `InventoryBagViewModel` 移除 `MoveToBar`。
-  - `InventorySlotContainerViewModel` 保留/新增通用方法：
-    - `MoveSlot(int fromIndex, int toIndex)`
-    - `MoveSlotTo(InventorySlotContainerViewModel target, int fromIndex, int toIndex)`
-    - `DropSlotToWorld(int index)`
-  - 跨容器移动由通用 transfer service 或 drag coordinator 调度，不再写 Bar/Bag 专用分支。
-- 拖拽目标识别：
+## Behavior
 
-  - 使用 `EventSystem.current.RaycastAll` 根据当前鼠标屏幕坐标获取 UI 命中结果。
-  - 从命中结果中向父级查找：
-    - `InventorySlotView`：表示当前在某个槽位上。
-    - `IInventorySlotContainerView` 或容器绑定组件：表示当前在某个槽位容器窗口区域内。
-  - 只把拖拽中事件发送给当前命中的最上层 Inventory 容器。
-  - 若未命中任何 Inventory 容器，拖拽结束时视为拖出 UI，执行丢弃。
-- Drag Coordinator：
+- 锄地：要求目标 cell 的 `MapGridCellFlags.CanDig` 存在，且无作物/家具占用；成功后生成耕地记录，设置退化结束时间。
+- 耕地退化：耕地有持续时间；未种植且到期后恢复普通土地，清除 Farm 对 MapGrid 的投影。
+- 浇水：要求 cell 已是耕地；设置湿润结束时间。湿润状态有持续时间，到期后变干。
+- 播种：要求 cell 已耕地且无作物；消耗背包中的种子，创建作物记录，并绑定对应 `CropData_SO`。
+- 生长：作物只有在地块湿润时推进阶段计时；湿润到期后暂停，重新浇水后继续累计剩余阶段时间。
+- 收获：成熟后用收获工具或交互动作收获；优先加入 `InventoryManager`，放不下时后续可接 `WorldItemManager` 掉落。
 
-  - 新增 `InventorySlotDragCoordinator` 统一管理拖拽流程。
-  - Window 只注册自己的 `containerId + View + ViewModel`。
-  - Coordinator 负责：
-    - 打开/移动/隐藏 `DropWindow`
-    - 查询当前鼠标下目标容器
-    - 刷新目标槽位 Drop Preview
-    - 调用同容器或跨容器移动
-    - 拖出 UI 时调用来源容器丢弃
-    - 通知当前目标 Bag 容器执行边缘滚动
-  - `GlobalUIWindow` / `BagWindow` 不再互相 `GetWindow` 调用来转发拖拽。
-- View 绑定：
+## API / Data Shape
 
-  - `InventorySlotView` 保存 `containerId` 和 `slotIndex`，拖拽事件只上报这两个值。
-  - `InventoryBarView` / `InventoryBagView` 初始化时传入自己的 `containerId`。
-  - `IInventorySlotContainerView` 增加必要的容器标识暴露，例如 `string ContainerId { get; }`，或通过绑定上下文传给 Coordinator。
-- 初始化修复：
-
-  - `InventoryManager` 增加 `IsInitialized` 和初始化完成通知。
-  - Window 在 Manager 初始化完成后再绑定 ViewModel。
-  - 避免 `OnAwake` 过早创建 ViewModel，导致拖拽回调没有绑定。
+- `FarmCellRecord`：`mapId`、`cell`、`soilState`、`tilledUntilTotalMinutes`、`wateredUntilTotalMinutes`、`cropInstanceId`。
+- `CropRuntimeRecord`：`cropId`、`seedItemId`、`stageIndex`、`remainingStageMinutes`、`isMature`。
+- `CropData_SO`：`cropId`、`seedItemId`、`harvestItemId`、`harvestCount`、`stages`，每个 stage 包含 `durationMinutes` 和表现资源引用。
+- `FarmLandManager` 公开方法：`TryTill`、`TryWater`、`TryPlant`、`TryHarvest`、`TryGetCellState`、`RestoreRuntimeProgress`、`ApplyMapGridProjection`、`ClearMapGridProjection`。
+- `sourceId` 规范：Farm 使用 `Farm:{mapId}:{x}:{y}`，Furniture 后续使用 `Furniture:{instanceId}`。
 
 ## Test Plan
 
-- Bar 内拖拽移动、合并、交换正常。
-- Bag 内拖拽移动、合并、交换正常。
-- Bar ↔ Bag 拖拽正常，不再调用 `MoveToBag / MoveToBar`。
-- 拖拽时只有鼠标下方的目标容器显示 Drop Preview。
-- 鼠标在 Bag 边缘时只有 Bag 执行边缘滚动。
-- 拖出所有 Inventory 容器后释放，执行整格丢弃到世界。
-- `rg "MoveToBag|MoveToBar"` 无剩余生产调用。
-- Window 之间不再互相转发拖拽事件。
+- Odin 手动测试组件优先：测试锄地、浇水、播种、生长暂停/恢复、成熟收获、耕地退化。
+- MapGrid 投影测试：锄地/种植后指定 cell 不能摆家具；清除/退化/收获后投影正确恢复。
+- 跨地图后台测试：加载 A 地图创建作物，切到 B 地图推进时间，再回 A 地图检查阶段和表现同步。
+- Cursor/Action 测试：不可操作 cell 不显示可交互；工具范围外不能执行；背包无种子时播种失败且不改变地块。
+- 时间测试：湿润时阶段倒计时减少；干燥时生长暂停；重新浇水后继续推进。
 
 ## Assumptions
 
-- 第一版目标识别使用 Unity UI Raycast，不额外维护窗口 Rect 列表。
-- `DropWindow` 的 Image 保持 `raycastTarget = false`，避免挡住底下的目标槽位。
-- 本轮仍只接入 Bar 和 Bag，但结构允许后续 Chest/Shop 通过注册容器接入。
+- 第一版不做读档后的离线补算；只处理本次运行期间的后台推进。
+- 第一版先完成耕种闭环，家具只预留同样的 `MapGrid` 投影边界。
+- `MapGridCellFlags` 不扩展为业务状态枚举；业务查询走 `FarmLandManager`，MapGrid 只负责可走、可放置、阻挡等底层判断。

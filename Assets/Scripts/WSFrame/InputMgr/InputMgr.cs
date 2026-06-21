@@ -35,7 +35,7 @@ namespace WS_Modules.InputModule
 #if ENABLE_INPUT_SYSTEM
                 return isStart && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 #else
-                return false;
+                return Input.GetMouseButtonDown(0);
 #endif
             }
         }

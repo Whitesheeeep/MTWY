@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using GameData;
 using Sirenix.OdinInspector;
@@ -99,9 +99,16 @@ namespace Inventory
             Initialize();
         }
 
-        private void OnValidate()
+        private void OnEnable()
         {
-
+            EventSystem.Register_Int<FarmHarvestRewardRequestedEventArgs>(
+                    (int)E_FarmEvent.HarvestRewardRequested,
+                    OnFarmHarvestRewardRequested)
+                .UnRegisterWhenGameObjectDisabled(gameObject);
+            EventSystem.Register_Int<FarmPlantSeedConsumeRequestedEventArgs>(
+                    (int)E_FarmEvent.PlantSeedConsumeRequested,
+                    OnFarmPlantSeedConsumeRequested)
+                .UnRegisterWhenGameObjectDisabled(gameObject);
         }
 
         /// <summary>
@@ -415,6 +422,83 @@ namespace Inventory
         }
         #endregion
 
+        // Farm 播种种子消耗请求通过事件总线进入背包，避免 Farm 直接依赖 Inventory。
+        private void OnFarmPlantSeedConsumeRequested(FarmPlantSeedConsumeRequestedEventArgs args)
+        {
+            if (args.SeedItemId <= 0 || args.Count <= 0)
+            {
+                Debug.LogWarning($"[InventoryManager] 播种种子消耗参数无效 seedItemId={args.SeedItemId}, count={args.Count}", this);
+                return;
+            }
+
+            if (!initialized)
+            {
+                Debug.LogWarning($"[InventoryManager] 尚未初始化，无法消耗播种种子 seedItemId={args.SeedItemId}, count={args.Count}", this);
+                return;
+            }
+
+            bool success;
+            try
+            {
+                success = RemoveItem(args.SeedItemId, args.Count);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[InventoryManager] 播种种子消耗失败 seedItemId={args.SeedItemId}, count={args.Count}, error={exception.Message}", this);
+                return;
+            }
+
+            if (!success)
+            {
+                Debug.LogWarning($"[InventoryManager] 播种种子数量不足 seedItemId={args.SeedItemId}, count={args.Count}", this);
+            }
+        }
+        // Farm 收获奖励请求通过事件总线进入背包，多余数量继续触发世界掉落事件。
+        private void OnFarmHarvestRewardRequested(FarmHarvestRewardRequestedEventArgs args)
+        {
+            if (args.HarvestItemId <= 0 || args.HarvestCount <= 0)
+            {
+                Debug.LogWarning($"[InventoryManager] 收获奖励参数无效 itemId={args.HarvestItemId}, count={args.HarvestCount}", this);
+                return;
+            }
+
+            if (!initialized)
+            {
+                Debug.LogWarning($"[InventoryManager] 尚未初始化，收获物直接掉落 itemId={args.HarvestItemId}, count={args.HarvestCount}", this);
+                DropHarvestRewardToWorld(args.HarvestItemId, args.HarvestCount);
+                return;
+            }
+
+            int remaining;
+            try
+            {
+                remaining = AddItem(args.HarvestItemId, args.HarvestCount);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[InventoryManager] 收获物加入背包失败，将直接掉落 itemId={args.HarvestItemId}, count={args.HarvestCount}, error={exception.Message}", this);
+                DropHarvestRewardToWorld(args.HarvestItemId, args.HarvestCount);
+                return;
+            }
+
+            if (remaining > 0)
+            {
+                DropHarvestRewardToWorld(args.HarvestItemId, remaining);
+            }
+        }
+
+        // 复用现有世界物品生成事件处理背包放不下的收获物。
+        private static void DropHarvestRewardToWorld(int itemId, int count)
+        {
+            if (itemId <= 0 || count <= 0)
+            {
+                return;
+            }
+
+            EventSystem.EventTrigger_Int(
+                (int)E_InventoryEvent.DropWorldItemRequested,
+                new InventoryDropWorldItemEventArgs(itemId, count));
+        }
         #region 内部生命周期
         private void EnsureStorageData()
         {

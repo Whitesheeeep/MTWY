@@ -10,7 +10,7 @@ using WS_Modules.Singleton;
 using EventSystem = WS_Modules.CustomEventSystem.EventSystem;
 
 /// <summary>
-/// Player runtime entry. Owns movement input state, body FSM, hold state, and current selected tool data.
+/// 玩家运行时入口，维护移动输入状态、身体状态机、手持状态和当前选中物品数据。
 /// </summary>
 public class Player : AutoSingletonMonoBase<Player>
 {
@@ -30,13 +30,16 @@ public class Player : AutoSingletonMonoBase<Player>
     public Vector2 CurrentDirectionVector => DirectionToVector(CurrentDirection);
     public bool IsHandHolding { get; private set; }
 
-    /// <summary>
-    /// Current selected tool data. Empty, invalid, or non-tool bar selections clear this value.
-    /// </summary>
-    public ItemData CurrentToolData { get; private set; }
+    public ItemData CurrentSelectedItemData { get; private set; }
 
+    public bool HasCurrentSelectedItem => CurrentSelectedItemData != null;
+    public E_ItemType CurrentSelectedItemType => CurrentSelectedItemData != null ? CurrentSelectedItemData.itemType : E_ItemType.None;
+    public ItemData CurrentToolData => CurrentSelectedItemData != null && ToolTypeUtility.IsTool(CurrentSelectedItemData.itemType)
+        ? CurrentSelectedItemData
+        : null;
     public bool HasCurrentTool => CurrentToolData != null;
     public E_ItemType CurrentToolType => CurrentToolData != null ? CurrentToolData.itemType : E_ItemType.None;
+    public event Action SelectedItemChanged;
     public event Action ToolChanged;
 
     protected override void Awake()
@@ -141,14 +144,14 @@ public class Player : AutoSingletonMonoBase<Player>
         if (args.ItemId == -1)
         {
             ClearHoldState();
-            SetCurrentTool(null);
+            SetCurrentSelectedItem(null);
             return;
         }
 
         if (!EnsureItemDatabase() || !database.TryGet(args.ItemId, out ItemData itemData))
         {
             ClearHoldState();
-            SetCurrentTool(null);
+            SetCurrentSelectedItem(null);
             return;
         }
 
@@ -164,18 +167,25 @@ public class Player : AutoSingletonMonoBase<Player>
             IsHandHolding = false;
         }
 
-        SetCurrentTool(ToolTypeUtility.IsTool(itemData.itemType) ? itemData : null);
+        SetCurrentSelectedItem(itemData);
     }
 
-    private void SetCurrentTool(ItemData itemData)
+    private void SetCurrentSelectedItem(ItemData itemData)
     {
-        if (ReferenceEquals(CurrentToolData, itemData))
+        if (ReferenceEquals(CurrentSelectedItemData, itemData))
         {
             return;
         }
 
-        CurrentToolData = itemData;
-        ToolChanged?.Invoke();
+        ItemData previousToolData = CurrentToolData;
+        CurrentSelectedItemData = itemData;
+
+        SelectedItemChanged?.Invoke();
+
+        if (!ReferenceEquals(previousToolData, CurrentToolData))
+        {
+            ToolChanged?.Invoke();
+        }
     }
 
     private bool EnsureItemDatabase()

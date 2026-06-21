@@ -13,5 +13,8 @@ namespace WS_Modules.CustomEventSystem
 
         GameTimeStart = InventoryEnd,
         GameTimeEnd = GameTimeStart + 100,
+
+        FarmStart = GameTimeEnd,
+        FarmEnd = FarmStart + 100,
     }
 }

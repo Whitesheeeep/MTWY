@@ -41,7 +41,7 @@ namespace WS_Modules.Pooling
                 return;
             }
 
-            string key = prefab.name;
+            string key = prefab.GetComponent<PoolObjectIdentity>()?.PoolKey ?? prefab.name;
             if (!CheckPrewarmValid(key, initCount, maxCapacity)) return;
 
             var poolData = GetOrCreatePrewarmPool(key, maxCapacity);

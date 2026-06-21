@@ -36,7 +36,8 @@ namespace WS_Modules.Singleton
                                 var obj = new GameObject(typeof(T).Name + " (Singleton)");
                                 _instance = obj.AddComponent<T>();
                             }
-                            DontDestroyOnLoad(_instance.gameObject);
+                            if (Application.isPlaying)
+                                DontDestroyOnLoad(_instance.gameObject);
                         }
                     }
                 }

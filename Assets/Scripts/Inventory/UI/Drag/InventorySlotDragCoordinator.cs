@@ -199,9 +199,24 @@ namespace WS_Modules.UIModule
             if (!session.IsActive || !IsValidSlot(session.SourceViewModel, session.SourceIndex)) return;
 
             bool success = session.SourceViewModel.DropSlotToWorld(session.SourceIndex);
+            if (success)
+            {
+                RefreshBarSelectionAfterWorldDrop();
+            }
+
             WSLog.Log($"[InventorySlotDragCoordinator] 槽位拖出丢弃结果 index={session.SourceIndex}, success={success}");
         }
 
+        // 快捷栏槽位拖出丢弃后，重新派发当前槽位选择事件，让 Player 同步清空手持物品。
+        private static void RefreshBarSelectionAfterWorldDrop()
+        {
+            if (session.SourceViewModel is not InventoryBarViewModel)
+            {
+                return;
+            }
+
+            session.SourceViewModel.SelectSlot(session.SourceIndex);
+        }
         private static void HideDropWindow()
         {
             UIManager.Instance.GetWindow<DropWindow>()?.HideDropItem();

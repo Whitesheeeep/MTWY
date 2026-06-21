@@ -41,7 +41,7 @@ namespace GameData.CharacterSchedule
                     : CharacterSchedulePlanResult.Failed($"No path on map '{fromMapId}' from {fromCell} to {targetCell}.");
             }
 
-            SceneTransitionEdge? edge = FindDirectEdge(fromMapId, targetMapId);
+            SceneTransitionEdge? edge = FindFirstDirectEdge(fromMapId, targetMapId);
             if (!edge.HasValue)
             {
                 return CharacterSchedulePlanResult.Failed($"No direct transition edge from '{fromMapId}' to '{targetMapId}'.");
@@ -90,7 +90,13 @@ namespace GameData.CharacterSchedule
             return CharacterSchedulePlanResult.CrossMap(currentSegment, targetSegment);
         }
 
-        private static SceneTransitionEdge? FindDirectEdge(string fromMapId, string targetMapId)
+        /// <summary>
+        /// 找到两个地图的第一个相连的边
+        /// </summary>
+        /// <param name="fromMapId"></param>
+        /// <param name="targetMapId"></param>
+        /// <returns></returns>
+        private static SceneTransitionEdge? FindFirstDirectEdge(string fromMapId, string targetMapId)
         {
             foreach (SceneTransitionEdge edge in SceneTransitionSystem.GetEdgesFromScene(fromMapId))
             {

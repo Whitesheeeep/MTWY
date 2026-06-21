@@ -7,7 +7,7 @@ using WS_Modules.Singleton;
 namespace CursorSystem
 {
     /// <summary>
-    /// Central state owner for the tool cursor, hover target detection, and Grid range checks.
+    /// 光标系统的中心状态拥有者，负责悬停目标检测、Grid 范围判断和光标状态刷新。
     /// </summary>
     public sealed class CursorManager : SingletonMonoBase<CursorManager>
     {
@@ -16,7 +16,11 @@ namespace CursorSystem
         [SerializeField] private LayerMask interactableLayerMask = Physics2D.DefaultRaycastLayers;
         [SerializeField] private Transform rangeOrigin;
 
+        private const int InteractableHitCapacity = 16;
+        private readonly Collider2D[] interactableHits = new Collider2D[InteractableHitCapacity];
+
         private CursorState currentState;
+        private bool loggedInteractableHitOverflow;
 
         public event Action CursorChanged;
 
@@ -33,10 +37,10 @@ namespace CursorSystem
 
         private void OnEnable()
         {
-            global::Player player = GetPlayer();
+            Player player = GetPlayer();
             if (player != null)
             {
-                player.ToolChanged += HandleToolChanged;
+                player.SelectedItemChanged += HandleSelectedItemChanged;
             }
 
             RefreshState(true);
@@ -47,7 +51,7 @@ namespace CursorSystem
             Player player = GetPlayer();
             if (player != null)
             {
-                player.ToolChanged -= HandleToolChanged;
+                player.SelectedItemChanged -= HandleSelectedItemChanged;
             }
         }
 
@@ -56,7 +60,7 @@ namespace CursorSystem
             RefreshState(false);
         }
 
-        private void HandleToolChanged()
+        private void HandleSelectedItemChanged()
         {
             RefreshState(true);
         }
@@ -64,57 +68,103 @@ namespace CursorSystem
         private void RefreshState(bool forceNotify)
         {
             CursorState nextState = BuildState();
-            if (!forceNotify && currentState.Equals(nextState))
+            bool shouldNotify = forceNotify || !currentState.Equals(nextState);
+            currentState = nextState;
+
+            if (!shouldNotify)
             {
                 return;
             }
 
-            currentState = nextState;
             CursorChanged?.Invoke();
         }
 
         private CursorState BuildState()
         {
             global::Player player = GetPlayer();
-            ItemData toolData = player != null ? player.CurrentToolData : null;
-            Sprite icon = toolData != null ? toolData.icon : defaultCursorIcon;
+            ItemData selectedItemData = player != null ? player.CurrentSelectedItemData : null;
+            Sprite icon = selectedItemData != null ? selectedItemData.icon : defaultCursorIcon;
             Vector2 mouseScreenPosition = InputMgr.Instance.MouseScreenPosition;
             Vector3 mouseWorldPosition = GetMouseWorldPosition(mouseScreenPosition);
 
             GameObject target = null;
-            IToolInteractable interactable = null;
+            IItemInteractable interactable = null;
             CursorTargetType targetType = CursorTargetType.None;
+            ItemInteractionContext interactionContext = default;
+            bool hasInteractionContext = false;
             MapGridCellInfo cellInfo = default;
             bool inToolRange = false;
             bool canInteract = false;
             Vector3Int originCell = Vector3Int.zero;
             Vector3Int targetCell = Vector3Int.zero;
 
-            if (toolData != null)
+            if (selectedItemData == null)
             {
-                bool hasGridRange = TryGetGridRange(mouseWorldPosition, out originCell, out targetCell, out inToolRange);
-                if (hasGridRange && inToolRange)
+                return new CursorState(
+                    icon,
+                    CursorVisualState.Normal,
+                    selectedItemData,
+                    target,
+                    interactable,
+                    targetType,
+                    interactionContext,
+                    hasInteractionContext,
+                    cellInfo,
+                    inToolRange,
+                    canInteract,
+                    originCell,
+                    targetCell);
+            }
+
+            MapGridManager mapGrid = MapGridManager.Instance;
+            bool hasGridRange = TryGetGridRange(
+                mapGrid,
+                selectedItemData,
+                mouseWorldPosition,
+                out originCell,
+                out targetCell,
+                out inToolRange);
+            if (hasGridRange && inToolRange)
+            {
+                bool hasCellInfo = mapGrid.TryGetCell(targetCell, out cellInfo);
+                if (hasCellInfo)
                 {
                     canInteract = TryGetEntityInteraction(
                         player,
-                        toolData,
+                        selectedItemData,
                         mouseScreenPosition,
                         mouseWorldPosition,
                         originCell,
                         targetCell,
+                        cellInfo,
                         inToolRange,
                         out target,
-                        out interactable);
+                        out interactable,
+                        out interactionContext);
 
                     if (canInteract)
                     {
+                        hasInteractionContext = true;
                         targetType = CursorTargetType.Entity;
                     }
                     else
                     {
-                        canInteract = TryGetMapCellInteraction(toolData, targetCell, out cellInfo);
+                        canInteract = TryGetMapCellInteraction(selectedItemData, cellInfo);
                         if (canInteract)
                         {
+                            interactionContext = new ItemInteractionContext(
+                                player,
+                                selectedItemData,
+                                mouseScreenPosition,
+                                mouseWorldPosition,
+                                originCell,
+                                targetCell,
+                                Mathf.Max(0, selectedItemData.itemUseRadius),
+                                inToolRange,
+                                null,
+                                CursorTargetType.MapCell,
+                                cellInfo);
+                            hasInteractionContext = true;
                             targetType = CursorTargetType.MapCell;
                         }
                     }
@@ -125,10 +175,12 @@ namespace CursorSystem
             return new CursorState(
                 icon,
                 visualState,
-                toolData,
+                selectedItemData,
                 target,
                 interactable,
                 targetType,
+                interactionContext,
+                hasInteractionContext,
                 cellInfo,
                 inToolRange,
                 canInteract,
@@ -150,39 +202,50 @@ namespace CursorSystem
 
         private bool TryGetEntityInteraction(
             global::Player player,
-            ItemData toolData,
+            ItemData selectedItemData,
             Vector2 mouseScreenPosition,
             Vector3 mouseWorldPosition,
             Vector3Int originCell,
             Vector3Int targetCell,
+            MapGridCellInfo cellInfo,
             bool inToolRange,
             out GameObject target,
-            out IToolInteractable interactable)
+            out IItemInteractable interactable,
+            out ItemInteractionContext interactionContext)
         {
             target = null;
             interactable = null;
+            interactionContext = default;
 
-            Collider2D[] colliders = Physics2D.OverlapPointAll(mouseWorldPosition, interactableLayerMask);
-            for (int i = 0; i < colliders.Length; i++)
+            int hitCount = Physics2D.OverlapPointNonAlloc(mouseWorldPosition, interactableHits, interactableLayerMask);
+            if (hitCount == interactableHits.Length && !loggedInteractableHitOverflow)
             {
-                IToolInteractable candidate = FindInteractableInParents(colliders[i]);
+                loggedInteractableHitOverflow = true;
+                Debug.LogWarning($"[CursorManager] Interactable hit buffer is full ({interactableHits.Length}). Increase capacity to avoid missed hover targets.", this);
+            }
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider2D hit = interactableHits[i];
+                IItemInteractable candidate = FindInteractableInParents(hit);
                 if (candidate == null)
                 {
                     continue;
                 }
 
-                GameObject candidateTarget = colliders[i].gameObject;
-                ToolInteractionContext context = new ToolInteractionContext(
+                GameObject candidateTarget = hit.gameObject;
+                ItemInteractionContext context = new ItemInteractionContext(
                     player,
-                    toolData,
+                    selectedItemData,
                     mouseScreenPosition,
                     mouseWorldPosition,
                     originCell,
                     targetCell,
-                    Mathf.Max(0, toolData.itemUseRadius),
+                    Mathf.Max(0, selectedItemData.itemUseRadius),
                     inToolRange,
                     candidateTarget,
-                    CursorTargetType.Entity);
+                    CursorTargetType.Entity,
+                    cellInfo);
 
                 if (!candidate.CanInteract(context))
                 {
@@ -191,6 +254,7 @@ namespace CursorSystem
 
                 target = candidateTarget;
                 interactable = candidate;
+                interactionContext = context;
                 return true;
             }
 
@@ -198,21 +262,15 @@ namespace CursorSystem
         }
 
         private bool TryGetMapCellInteraction(
-            ItemData toolData,
-            Vector3Int targetCell,
-            out MapGridCellInfo cellInfo)
+            ItemData selectedItemData,
+            MapGridCellInfo cellInfo)
         {
-            cellInfo = default;
-            MapGridManager mapGrid = MapGridManager.Instance;
-            if (!mapGrid.TryGetCell(targetCell, out cellInfo))
-            {
-                return false;
-            }
-
-            return ToolMapCellInteractionRules.CanInteract(toolData, cellInfo);
+            return ItemMapCellInteractionRules.CanInteract(selectedItemData, cellInfo);
         }
 
         private bool TryGetGridRange(
+            MapGridManager mapGrid,
+            ItemData selectedItemData,
             Vector3 mouseWorldPosition,
             out Vector3Int originCell,
             out Vector3Int targetCell,
@@ -222,15 +280,12 @@ namespace CursorSystem
             targetCell = Vector3Int.zero;
             inToolRange = false;
 
-            MapGridManager mapGrid = MapGridManager.Instance;
             if (rangeOrigin == null || !mapGrid.HasCurrentGrid)
             {
                 return false;
             }
 
-            global::Player player = GetPlayer();
-            ItemData toolData = player != null ? player.CurrentToolData : null;
-            int radius = toolData != null ? Mathf.Max(0, toolData.itemUseRadius) : 0;
+            int radius = Mathf.Max(0, selectedItemData.itemUseRadius);
             originCell = mapGrid.WorldToCell(rangeOrigin.position);
             targetCell = mapGrid.WorldToCell(mouseWorldPosition);
             int distance = Mathf.Abs(targetCell.x - originCell.x) + Mathf.Abs(targetCell.y - originCell.y);
@@ -238,18 +293,9 @@ namespace CursorSystem
             return true;
         }
 
-        private static IToolInteractable FindInteractableInParents(Collider2D collider)
+        private static IItemInteractable FindInteractableInParents(Collider2D collider)
         {
-            MonoBehaviour[] behaviours = collider.GetComponentsInParent<MonoBehaviour>();
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                if (behaviours[i] is IToolInteractable interactable)
-                {
-                    return interactable;
-                }
-            }
-
-            return null;
+            return collider.GetComponentInParent<IItemInteractable>();
         }
 
         private static Player GetPlayer()

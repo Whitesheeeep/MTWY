@@ -681,6 +681,7 @@ GameObject:
   - component: {fileID: 410271454}
   - component: {fileID: 410271456}
   - component: {fileID: 410271457}
+  - component: {fileID: 410271458}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -715,7 +716,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30e9eb8ff3dfed54c8fc11ed01c62d4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemId: 1001
+  itemId: 1013
   count: 1
   fromIndex: 0
   toIndex: 1
@@ -811,13 +812,101 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   testCharacterId: npc_old_man
   testFlagId: schedule.oldman.go_square
-  setFlagBeforeRun: 1
   testFlagValue: 1
-  testHour: 8
+  testAdvanceMinutes: 1
+--- !u!114 &410271458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410271451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef9e1873b8abf94aa04c634b08ffa30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCell: {x: 33, y: -19, z: 0}
+  useMapGridCellInfo: 1
+  fallbackToSyntheticCanDigCellInfo: 1
+  seedItemId: 1003
+  hoeToolItemId: 1012
+  waterToolItemId: 1013
+  harvestToolItemId: 1003
+  itemUseRadius: 1
+  testSeason: 0
+  testYear: 1
+  testDay: 1
+  testHour: 6
   testMinute: 0
-  pathTimeoutSeconds: 12
-  progressLogIntervalSeconds: 0.5
-  worldMoveThreshold: 0.001
+  maxGrowthDays: 20
+  waterBeforeEachGrowthDay: 1
+--- !u!1 &420855191
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 420855193}
+  - component: {fileID: 420855192}
+  - component: {fileID: 420855194}
+  m_Layer: 0
+  m_Name: FarmVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &420855192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 420855191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35bde57c24d4432b97f7943b843c1641, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tilledTilemapTag: FarmTilledTilemap
+  wateredTilemapTag: FarmWateredTilemap
+  tilledTile: {fileID: 11400000, guid: cb2c1e941a03f3b44bebf7d115ac134d, type: 2}
+  wateredTile: {fileID: 11400000, guid: fd69729ee79d8984ab050da6f713d4df, type: 2}
+  redrawOnEnable: 1
+--- !u!4 &420855193
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 420855191}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 937343532}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &420855194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 420855191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de56d9d7b681ae942839bf3e2ccf0b29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cropPrefab: {fileID: 3843204319262620711, guid: ee3135660062c5143913f24cca8d05b8, type: 3}
+  cropRoot: {fileID: 937343532}
+  redrawOnEnable: 1
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -1118,6 +1207,37 @@ Transform:
   m_Children:
   - {fileID: 410271452}
   m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &937343531
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 937343532}
+  m_Layer: 0
+  m_Name: FarmRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &937343532
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 937343531}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 420855193}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1071747872
 GameObject:
@@ -2280,6 +2400,7 @@ GameObject:
   m_Component:
   - component: {fileID: 900100000000000001}
   - component: {fileID: 900100000000000002}
+  - component: {fileID: 900100000000000003}
   m_Layer: 0
   m_Name: CursorManager
   m_TagString: Untagged
@@ -2320,6 +2441,19 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 275
   rangeOrigin: {fileID: 139756981}
+--- !u!114 &900100000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900100000000000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28fcc373e73bb794da20fe69f7b410bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logFailedActions: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2340,3 +2474,4 @@ SceneRoots:
   - {fileID: 900100000000000001}
   - {fileID: 1188560614}
   - {fileID: 409128547}
+  - {fileID: 420855193}

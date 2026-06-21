@@ -186,7 +186,7 @@ namespace WS_Modules.UIModule
         #endregion
 
         #region Model Events
-        private void OnModelSlotChanged(InventorySlotChangedEventArgs eventArgs)
+        protected virtual void OnModelSlotChanged(InventorySlotChangedEventArgs eventArgs)
         {
             RefreshSlotFromModel(eventArgs.Index);
         }

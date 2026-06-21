@@ -11,6 +11,7 @@ namespace WS_Modules.UIModule
     public sealed class ToolCursorView : MonoBehaviour
     {
         [SerializeField] private Image cursorImage;
+        [SerializeField] private Sprite defaultSprite;
         [SerializeField] private Color normalColor = Color.white;
         [SerializeField] private Color interactableColor = Color.green;
 
@@ -18,6 +19,9 @@ namespace WS_Modules.UIModule
         private RectTransform rectTransform;
         private Canvas canvas;
 
+        /// <summary>
+        /// 绑定工具鼠标指针 ViewModel。
+        /// </summary>
         public void Bind(ToolCursorViewModel toolCursorViewModel)
         {
             Unbind();
@@ -27,6 +31,9 @@ namespace WS_Modules.UIModule
             Refresh();
         }
 
+        /// <summary>
+        /// 解绑当前 ViewModel。
+        /// </summary>
         public void Unbind()
         {
             if (viewModel != null)
@@ -36,37 +43,43 @@ namespace WS_Modules.UIModule
             }
         }
 
+        // 初始化时缓存 UI 引用。
         private void Awake()
         {
             EnsureReferences();
         }
 
+        // 每帧让自定义指针跟随鼠标位置。
         private void Update()
         {
             FollowMouse();
         }
 
+        // 销毁时解除 ViewModel 订阅。
         private void OnDestroy()
         {
             Unbind();
         }
 
+        // 根据 ViewModel 当前状态刷新图标、显隐和颜色。
         private void Refresh()
         {
             EnsureReferences();
-            if (cursorImage == null || viewModel == null)
+            if (cursorImage == null)
             {
                 return;
             }
 
-            bool visible = viewModel.Visible;
-            cursorImage.enabled = visible;
-            cursorImage.sprite = visible ? viewModel.Icon : null;
-            cursorImage.color = viewModel.VisualState == CursorVisualState.Interactable
+            bool useSelectedIcon = viewModel != null && viewModel.Visible;
+            Sprite sprite = useSelectedIcon ? viewModel.Icon : defaultSprite;
+            cursorImage.enabled = sprite != null;
+            cursorImage.sprite = sprite;
+            cursorImage.color = viewModel != null && viewModel.VisualState == CursorVisualState.Interactable
                 ? interactableColor
                 : normalColor;
         }
 
+        // 将 UI 指针移动到当前鼠标屏幕坐标。
         private void FollowMouse()
         {
             EnsureReferences();
@@ -90,6 +103,7 @@ namespace WS_Modules.UIModule
             }
         }
 
+        // 缓存 RectTransform 和所在 Canvas。
         private void EnsureReferences()
         {
             if (rectTransform == null)
@@ -103,6 +117,7 @@ namespace WS_Modules.UIModule
             }
         }
 
+        // 获取当前 Canvas 坐标转换所需的事件相机。
         private Camera GetCanvasCamera()
         {
             if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)

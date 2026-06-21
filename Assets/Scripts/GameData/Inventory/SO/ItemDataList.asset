@@ -43,7 +43,7 @@ MonoBehaviour:
     itemType: 0
     icon: {fileID: 21300000, guid: 2597146da57814c789a59eda5740c9bf, type: 3}
     worldIcon: {fileID: 21300000, guid: 0f5a527a6777043739c58b084887ec12, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 1
     canCarried: 1
@@ -91,7 +91,7 @@ MonoBehaviour:
     itemType: 0
     icon: {fileID: 21300000, guid: a4cf1d099c0994049a38e73bf9d629dd, type: 3}
     worldIcon: {fileID: 21300000, guid: 738078985c017481f8d443cf821e26b5, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 0
     canCarried: 0
@@ -103,7 +103,7 @@ MonoBehaviour:
     itemType: 0
     icon: {fileID: 21300000, guid: 9f9b0e3a4d4144c4f857b9c99e50a8be, type: 3}
     worldIcon: {fileID: 21300000, guid: 7fa27847daa7848cd8221a18379f7a21, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 0
     canCarried: 0
@@ -115,7 +115,7 @@ MonoBehaviour:
     itemType: 0
     icon: {fileID: 21300000, guid: 145ecd71b23ff4ef1ae4b88ba1820deb, type: 3}
     worldIcon: {fileID: 21300000, guid: a190370c9a26a43aa9c3e596f8976fc4, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 0
     canCarried: 0
@@ -127,7 +127,7 @@ MonoBehaviour:
     itemType: 4
     icon: {fileID: 21300000, guid: 3714c3e6b5e3d498ebcd06d432b3dd89, type: 3}
     worldIcon: {fileID: 21300000, guid: 3714c3e6b5e3d498ebcd06d432b3dd89, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 1
     canCarried: 0
@@ -139,7 +139,7 @@ MonoBehaviour:
     itemType: 6
     icon: {fileID: 21300000, guid: 9aae36af8a3474f72a99e04af71b7044, type: 3}
     worldIcon: {fileID: 21300000, guid: 9aae36af8a3474f72a99e04af71b7044, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 1
     canCarried: 0
@@ -151,9 +151,57 @@ MonoBehaviour:
     itemType: 3
     icon: {fileID: 21300000, guid: 71ca9227166f34790bb8b1c7948d491f, type: 3}
     worldIcon: {fileID: 21300000, guid: 71ca9227166f34790bb8b1c7948d491f, type: 3}
-    itemUseRadius: 1
+    itemUseRadius: 2
     canPickedUp: 1
     canDropped: 1
     canCarried: 0
     price: 0
     sellPercent: 0
+  - Id: 1013
+    name: kettle
+    description: 
+    itemType: 7
+    icon: {fileID: 21300000, guid: 5b98b5b289f8549f9bbd017e5f0aa5c7, type: 3}
+    worldIcon: {fileID: 21300000, guid: 5b98b5b289f8549f9bbd017e5f0aa5c7, type: 3}
+    itemUseRadius: 2
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 0
+    price: 0
+    sellPercent: 0
+  - Id: 1014
+    name: Red Carrot
+    description: 
+    itemType: 1
+    icon: {fileID: 504974383, guid: ba8cb7102384d418883ef909ed3befd5, type: 3}
+    worldIcon: {fileID: 504974383, guid: ba8cb7102384d418883ef909ed3befd5, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 1
+    price: 100
+    sellPercent: 80
+  - Id: 1015
+    name: Grape
+    description: 
+    itemType: 0
+    icon: {fileID: 21300000, guid: 13fd782ac3661413abe57fc16343e499, type: 3}
+    worldIcon: {fileID: 21300000, guid: eff80b331cf5c4ca49471d8604c3b52e, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 1
+    price: 0
+    sellPercent: 0
+  - Id: 1016
+    name: "\u8461\u8404"
+    description: 
+    itemType: 1
+    icon: {fileID: 21300000, guid: 567730b76d77440f09c9bb6adee6040f, type: 3}
+    worldIcon: {fileID: 21300000, guid: 567730b76d77440f09c9bb6adee6040f, type: 3}
+    itemUseRadius: 1
+    canPickedUp: 1
+    canDropped: 1
+    canCarried: 1
+    price: 200
+    sellPercent: 40

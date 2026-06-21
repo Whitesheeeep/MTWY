@@ -33,6 +33,8 @@ namespace Gameplay.TimeSystem
         private const int MinutesPerHour = 60;
         private const string SavePath = "GameTime/current_time";
 
+        public const int MinutesPerDay = HoursPerDay * MinutesPerHour;
+
         /// <summary>
         /// 允许使用的时间倍率。SetTimeScale 会吸附到最近的倍率值。
         /// </summary>
@@ -738,17 +740,17 @@ namespace Gameplay.TimeSystem
         /// <summary>
         /// 创建以“游戏分钟”为输入单位的时间轮。
         /// tickUnit = 1 表示累计 1 个游戏分钟推进 1 个 TimeWheel tick。
-        /// slotCounts = { 1440, 28, 12 } 对齐当前日历：
-        /// level 0 覆盖 1440 分钟，即 1 天；
-        /// level 1 覆盖 1440 * 28 分钟，即 1 个月；
-        /// level 2 覆盖 1440 * 28 * 12 分钟，即 1 年。
+        /// slotCounts = { MinutesPerDay, DaysPerMonth, MonthsPerYear } 对齐当前日历：
+        /// level 0 覆盖 MinutesPerDay 分钟，即 1 天；
+        /// level 1 覆盖 MinutesPerDay * DaysPerMonth 分钟，即 1 个月；
+        /// level 2 覆盖 MinutesPerDay * DaysPerMonth * MonthsPerYear 分钟，即 1 年。
         /// </summary>
         private static TimeWheelScheduler CreateGameMinuteScheduler()
         {
             return new TimeWheelScheduler(new TimeWheelConfig(
                 tickUnit: 1f,
-                slotCounts: new List<int> { 1440, 28, 12 },
-                maxCatchUpTicksPerFrame: 1440));
+                slotCounts: new List<int> { MinutesPerDay, DaysPerMonth, MonthsPerYear },
+                maxCatchUpTicksPerFrame: MinutesPerDay));
         }
 
         #endregion
@@ -771,17 +773,17 @@ namespace Gameplay.TimeSystem
 
             if (Keyboard.current[daySkipButton].wasPressedThisFrame)
             {
-                AdvanceMinutes(1440);
+                AdvanceMinutes(MinutesPerDay);
             }
 
             if (Keyboard.current[monthSkipButton].wasPressedThisFrame)
             {
-                AdvanceMinutes(1440 * 28);
+                AdvanceMinutes(MinutesPerDay * DaysPerMonth);
             }
 
             if (Keyboard.current[yearSkipButton].wasPressedThisFrame)
             {
-                AdvanceMinutes(1440 * 28 * 12);
+                AdvanceMinutes(MinutesPerDay * DaysPerMonth * MonthsPerYear);
             }
 
             if (Keyboard.current[timeScaleButton].wasPressedThisFrame)

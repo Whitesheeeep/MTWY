@@ -36945,7 +36945,7 @@ GameObject:
   - component: {fileID: 838262896}
   m_Layer: 0
   m_Name: Water
-  m_TagString: Untagged
+  m_TagString: FarmWateredTilemap
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -42285,7 +42285,7 @@ GameObject:
   - component: {fileID: 1097440399}
   m_Layer: 0
   m_Name: Dig
-  m_TagString: Untagged
+  m_TagString: FarmTilledTilemap
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
