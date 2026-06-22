@@ -39,7 +39,7 @@ namespace WS_Modules.Pooling
         /// <summary>
         /// 使用已经持有的 prefab 预热 GameObject 池。优先使用 prefab 上的 PoolObjectIdentity.PoolKey，缺失时使用 prefab 名称；资源路径或 Addressable 场景建议优先使用 string key 重载。
         /// </summary>
-        public void Prewarm(GameObject prefab, int initCount, int maxCapacity)
+        public void Prewarm(GameObject prefab, int initCount, int maxCapacity, bool usePrefabAsFirst = false)
         {
             if (prefab == null)
             {
@@ -54,7 +54,7 @@ namespace WS_Modules.Pooling
             int needed = initCount - poolData.Count;
             if (needed <= 0) return;
 
-            PrewarmObjects(poolData, key, prefab, needed, false);
+            PrewarmObjects(poolData, key, prefab, needed, usePrefabAsFirst);
         }
 
         /// <summary>

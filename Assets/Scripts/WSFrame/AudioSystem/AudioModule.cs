@@ -162,7 +162,8 @@ namespace WS_Modules.AudioSystem
             // 如果资源中不存在该 Key，会在日志中报错，提示开发者添加资源
             GameObject audioSourcePrefab = new GameObject(_audioUnitKey);
             audioSourcePrefab.AddComponent<AudioSource>();
-            _audioSourcePoolModule.Prewarm(audioSourcePrefab,initCount, -1); // -1 代表无限容量
+            audioSourcePrefab.AddComponent<PoolObjectIdentity>().PoolKey = _audioUnitKey; // 确保预制体上有 PoolObjectIdentity 组件，并设置 PoolKey
+            _audioSourcePoolModule.Prewarm(audioSourcePrefab,initCount, -1, true); // -1 代表无限容量
         }
 
         public void Dispose()
